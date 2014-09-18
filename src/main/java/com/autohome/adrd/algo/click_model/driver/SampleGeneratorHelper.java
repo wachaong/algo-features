@@ -74,6 +74,34 @@ public class SampleGeneratorHelper {
 		return s;
 	}
 	
+	public Sample process2(Sample s) {
+		
+		//Sample s = source.process(raw_data);
+		
+		if(s == null) {
+			return s;
+		}
+		
+		
+		//interaction and transformation
+		ArrayList<Sample> s1 = new ArrayList<Sample>();
+		s1.add(s);
+		for(ArrayList<Transformer> trans_list : trans) {
+			ArrayList<Sample> s2 = new ArrayList<Sample>();
+			for(Sample sample_in : s1) {
+				for(Transformer trans_tmp : trans_list) {
+					Sample stmp = trans_tmp.transform(sample_in);
+					s2.add(stmp);
+				}
+			}
+			s1 = s2;
+		}
+		
+		//assemble all the samples
+		s = Assembler.assemble(s1);
+		return s;
+	}
+	
 	public Source getSource() {
 		return source;
 	}
