@@ -20,21 +20,23 @@ import java.io.IOException;
 
 public class SampleGenerator extends AbstractProcessor{
 
-
-	public static class SampleGeneratorMapper extends Mapper<LongWritable, Text, SingleInstanceWritable, NullWritable> {
+	
+	public static class SampleGeneratorMapper extends Mapper<NullWritable, Sample, SingleInstanceWritable, NullWritable> {
 		private SampleGeneratorHelper helper = new SampleGeneratorHelper();
 		private Map<String, Integer> feature_id_map = new HashMap<String, Integer>();
 
 
 		protected void setup(Context context) throws FileNotFoundException {
-			helper.setup("config-hadoop.xml");
-			feature_id_map = helper.readMaps("feature_id_map.txt");
+			String conf_file = context.getConfiguration().get("config_file");
+			helper.setup(conf_file);
+			String feature_map_file = context.getConfiguration().get("feature_map");
+			feature_id_map = helper.readMaps(feature_map_file);
 		}
 
-		public void map(LongWritable k1, Text v1, Context context) throws IOException, InterruptedException {
+		public void map(NullWritable k1, Sample s, Context context) throws IOException, InterruptedException {
 			//source :
-			if(k1.get() > 1) {
-				Sample s = helper.process(v1);
+			//if(k1.get() > 1) {
+				
 				SingleInstanceWritable instance = new SingleInstanceWritable();
 				instance.setLabel(s.getLabel());
 
@@ -51,7 +53,7 @@ public class SampleGenerator extends AbstractProcessor{
 				if(s != null) {
 					context.write(instance, NullWritable.get());
 				}	
-			}
+			//}
 		}
 	}
 

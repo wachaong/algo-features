@@ -11,7 +11,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Reducer;
 
 import com.autohome.adrd.algo.sessionlog.consume.RCFileBaseMapper;
 import com.autohome.adrd.algo.click_model.data.Sample;
@@ -28,7 +27,7 @@ import com.autohome.adrd.algo.protobuf.AdLogOperation;
 
 public class CtrSource extends AbstractProcessor {
 	
-	public static class RCFileMapper extends RCFileBaseMapper<Sample, NullWritable> {
+	public static class RCFileMapper extends RCFileBaseMapper<NullWritable, Sample> {
 		
 		public static final String CG_USER = "user";
 		public static final String CG_ADDISPLAY = "addisplay";
@@ -87,7 +86,7 @@ public class CtrSource extends AbstractProcessor {
 					s.setLabel(1.0);
 					Sample sample_out = helper.process2(s);
 					
-					context.write(sample_out, null);
+					context.write( NullWritable.get(), sample_out);
 				}
 			}
 			
@@ -107,10 +106,8 @@ public class CtrSource extends AbstractProcessor {
 						s.setFeature("regionid@" + pvinfo.getRegionid());
 						s.setLabel(0.0);
 						Sample sample_out = helper.process2(s);
-						context.write(sample_out, null);
-						
-					}			
-								
+						context.write( NullWritable.get(), sample_out);
+					}					
 				}
 			}										
 		}
@@ -121,9 +118,9 @@ public class CtrSource extends AbstractProcessor {
 	protected void configJob(Job job) {
 		job.getConfiguration().set("mapred.job.priority", "VERY_HIGH");
 		job.setMapperClass(RCFileMapper.class);
-		job.setMapOutputKeyClass(Sample.class);
-		job.setMapOutputValueClass(NullWritable.class);
-		job.setOutputKeyClass(Sample.class);
-		job.setOutputValueClass(NullWritable.class);
+		job.setMapOutputValueClass(Sample.class);
+		job.setMapOutputKeyClass(NullWritable.class);
+		job.setOutputValueClass(Sample.class);
+		job.setOutputKeyClass(NullWritable.class);
 	}	
 }
