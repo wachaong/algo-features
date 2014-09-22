@@ -84,8 +84,8 @@ public class CtrSource extends AbstractProcessor {
 					s.setFeature("psid@" + clkinfo.getPsid());
 					s.setFeature("regionid@" + clkinfo.getRegionid());
 					s.setLabel(1.0);
-					Sample sample_out = helper.process2(s);
-					
+					//Sample sample_out = helper.process2(s);
+					Sample sample_out = helper.process(s);
 					context.write( NullWritable.get(), sample_out);
 				}
 			}
