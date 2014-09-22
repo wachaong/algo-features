@@ -54,7 +54,9 @@ public class SampleGeneratorHelper {
 			return s;
 		}
 		
-		
+		if(trans == null || trans.size() == 0) {
+			return s;
+		}
 		//interaction and transformation
 		ArrayList<Sample> s1 = new ArrayList<Sample>();
 		s1.add(s);
