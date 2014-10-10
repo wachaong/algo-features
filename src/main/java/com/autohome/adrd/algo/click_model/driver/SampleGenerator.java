@@ -34,9 +34,7 @@ public class SampleGenerator extends AbstractProcessor{
 		}
 
 		public void map(NullWritable k1, Sample s, Context context) throws IOException, InterruptedException {
-			//source :
-			//if(k1.get() > 1) {
-				
+			//source :			
 				SingleInstanceWritable instance = new SingleInstanceWritable();
 				instance.setLabel(s.getLabel());
 
@@ -52,8 +50,7 @@ public class SampleGenerator extends AbstractProcessor{
 
 				if(s != null) {
 					context.write(instance, NullWritable.get());
-				}	
-			//}
+				}
 		}
 	}
 
