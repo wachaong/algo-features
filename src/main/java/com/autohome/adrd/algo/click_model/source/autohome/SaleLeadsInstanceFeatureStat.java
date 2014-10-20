@@ -16,8 +16,6 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.Reducer.Context;
 
 import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
-import com.autohome.adrd.algo.click_model.source.autohome.LabelInstanceSaleLeads.HReduce;
-import com.autohome.adrd.algo.click_model.source.autohome.LabelInstanceSaleLeads.RCFileMapper;
 import com.autohome.adrd.algo.protobuf.ApplogOperation;
 import com.autohome.adrd.algo.protobuf.PvlogOperation;
 import com.autohome.adrd.algo.protobuf.SaleleadsInfoOperation;

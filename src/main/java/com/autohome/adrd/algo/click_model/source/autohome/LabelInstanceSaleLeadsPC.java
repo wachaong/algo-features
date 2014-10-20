@@ -27,7 +27,7 @@ import com.autohome.adrd.algo.protobuf.TargetingKVOperation;
  * 
  */
 
-public class LabelInstanceSaleLeads extends AbstractProcessor {
+public class LabelInstanceSaleLeadsPC extends AbstractProcessor {
 
 	public static class RCFileMapper extends RCFileBaseMapper<Text, Text> {
 
@@ -113,38 +113,20 @@ public class LabelInstanceSaleLeads extends AbstractProcessor {
 			
 			String tags = sb.toString();
 
-			int pv_cnt = 0;
+			//assume pv and app not overlapping
+			int pv_cnt = 0, pv_mobile_cnt = 0;
 			if (pvList != null && pvList.size() != 0)
-				pv_cnt += pvList.size();
+				pv_cnt = pvList.size();
 			if (app_pvList != null && app_pvList.size() != 0)
-				pv_cnt += app_pvList.size();
+				pv_mobile_cnt = app_pvList.size();
 
-			HashSet<String> clk_set = new HashSet<String>();
-			HashSet<String> saleleads_set = new HashSet<String>();
 			
-			String fea_lst = "";
 			if (saleleadsList != null && saleleadsList.size() != 0) {
-				for (SaleleadsInfoOperation.SaleleadsInfo saleleads : saleleadsList) {
-					
-					if(saleleads_set.contains(saleleads.getCururl() + "\t" + saleleads.getRefurl()))
-						continue;
-					else
-						saleleads_set.add(saleleads.getCururl() + "\t" + saleleads.getRefurl());
-					
-					context.write(new Text(tags), new Text("1"));
-				}
-			} else if (pvList != null && pvList.size() != 0) {
-				for (PvlogOperation.AutoPVInfo pvinfo : pvList) {
-
-				}
-
+				context.write(new Text(tags), new Text("1"));
+			} else if (pv_cnt > 0) {
 				context.write(new Text(tags), new Text("0"));
-			} else if (app_pvList != null && app_pvList.size() != 0) {
-				for (ApplogOperation.AutoAppInfo apppvinfo : app_pvList) {
-
-				}
-				
-				context.write(new Text(tags), new Text("0"));
+			} else if (pv_mobile_cnt > 0) {				
+				//context.write(new Text(tags), new Text("0"));
 			}
 		}
 	}
