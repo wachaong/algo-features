@@ -42,7 +42,7 @@ public class ArticleId extends AbstractProcessor {
 
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
-			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,addisplay,adclick");
+			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,addisplay,adclick,pv,apppv,saleleads,tags");
 		}
 
 		@SuppressWarnings({ "unchecked", "deprecation" })
