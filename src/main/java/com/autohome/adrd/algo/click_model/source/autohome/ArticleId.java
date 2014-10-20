@@ -18,6 +18,7 @@ import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
 import com.autohome.adrd.algo.protobuf.AdLogOperation;
 import com.autohome.adrd.algo.protobuf.ApplogOperation;
 import com.autohome.adrd.algo.protobuf.PvlogOperation;
+import com.autohome.adrd.algo.protobuf.PvlogOperation.AutoPVInfo;
 import com.autohome.adrd.algo.protobuf.SaleleadsInfoOperation;
 import com.autohome.adrd.algo.protobuf.TargetingKVOperation;
 
@@ -27,7 +28,7 @@ import com.autohome.adrd.algo.protobuf.TargetingKVOperation;
  * 
  */
 
-public class LabelInstanceSaleLeadsPC extends AbstractProcessor {
+public class ArticleId extends AbstractProcessor {
 
 	public static class RCFileMapper extends RCFileBaseMapper<Text, Text> {
 
@@ -59,75 +60,28 @@ public class LabelInstanceSaleLeadsPC extends AbstractProcessor {
 			TargetingKVOperation.TargetingInfo targeting = (TargetingKVOperation.TargetingInfo) list.get(CG_TAGS);
 
 			StringBuilder sb = new StringBuilder();
-			if (targeting != null) {
-				if (targeting.getSeriesListCount() != 0) {
-					for (int i = 0; i < targeting.getSeriesListList().size(); i++) {
-						sb.append(targeting.getSeriesListList().get(i).getSeriesid());
-						sb.append(":");
-						sb.append(targeting.getSeriesListList().get(i).getScore());
-						sb.append("\t");
-					}
-				}
-				if (targeting.getBrandListCount() != 0) {
-					for (int i = 0; i < targeting.getBrandListList().size(); i++) {
-						sb.append(targeting.getBrandListList().get(i).getBrandid());
-						sb.append(":");
-						sb.append(targeting.getBrandListList().get(i).getScore());
-						sb.append("\t");
-					}
-				}
-				if (targeting.getSpecListCount() != 0) {
-					for (int i = 0; i < targeting.getSpecListList().size(); i++) {
-						sb.append(targeting.getSpecListList().get(i).getSpecid());
-						sb.append(":");
-						sb.append(targeting.getSpecListList().get(i).getScore());
-						sb.append("\t");
-					}
-				}
-				if (targeting.getLevelListCount() != 0) {
-					for (int i = 0; i < targeting.getLevelListList().size(); i++) {
-						sb.append(targeting.getLevelListList().get(i).getLevelid());
-						sb.append(":");
-						sb.append(targeting.getLevelListList().get(i).getScore());
-						sb.append("\t");
-					}
-				}
-				if (targeting.getPriceListCount() != 0) {
-					for (int i = 0; i < targeting.getPriceListList().size(); i++) {
-						sb.append(targeting.getPriceListList().get(i).getPriceid());
-						sb.append(":");
-						sb.append(targeting.getPriceListList().get(i).getScore());
-						sb.append("\t");
-					}
-				}
-				
-				if (targeting.getExtendInfoListCount() != 0) {
-					for (int i = 0; i < targeting.getExtendInfoListList().size(); i++) {
-						sb.append(targeting.getExtendInfoListList().get(i).getTagid());
-						sb.append(":");
-						sb.append(targeting.getExtendInfoListList().get(i).getScore());
-						sb.append("\t");
-					}
-				}				
-			}
 			
-			String tags = sb.toString();
-
 			//assume pv and app not overlapping
-			int pv_cnt = 0, pv_mobile_cnt = 0;
+			int pv_cnt = 0, pv_mobile_cnt = 0, saleleads_cnt = 0;
 			if (pvList != null && pvList.size() != 0)
 				pv_cnt = pvList.size();
 			if (app_pvList != null && app_pvList.size() != 0)
 				pv_mobile_cnt = app_pvList.size();
+			if (saleleadsList != null && saleleadsList.size() != 0)
+				saleleads_cnt = saleleadsList.size();
 
 			if(pv_cnt > 0)
 			{
-				if (saleleadsList != null && saleleadsList.size() != 0) {				
-					context.write(new Text(tags), new Text("1"));
-				} else {
-					context.write(new Text(tags), new Text("0"));
+				if (saleleads_cnt > 0) {
+					for(AutoPVInfo pvinfo : pvList)					
+						context.write(new Text(pvinfo.getCururl()), new Text("T"));
+				} 
+				else {
+					for(AutoPVInfo pvinfo : pvList)					
+						context.write(new Text(pvinfo.getCururl()), new Text("F"));
 				}
 			}
+			
 		}
 	}
 
@@ -135,18 +89,16 @@ public class LabelInstanceSaleLeadsPC extends AbstractProcessor {
 
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 
-			int pv_cnt = 0, clk_cnt = 0;
+			int pv_t = 0, pv_f = 0;
 			for (Text value : values) {
-				if (value.toString().equals("1")) {
-					pv_cnt += 1;
-					clk_cnt += 1;
+				if (value.toString().equals("T")) {
+					pv_t += 1;
 				}
-				if (value.toString().equals("0")) {
-					pv_cnt += 1;
+				if (value.toString().equals("F")) {
+					pv_f += 1;
 				}
 			}
-
-			context.write(new Text(String.valueOf(clk_cnt) + "\t" + String.valueOf(pv_cnt)), key);
+			context.write(key, new Text(String.valueOf(pv_t) + "\t" + String.valueOf(pv_f)));
 		}
 	}
 
