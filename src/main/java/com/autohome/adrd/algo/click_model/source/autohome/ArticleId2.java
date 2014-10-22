@@ -28,7 +28,7 @@ import com.autohome.adrd.algo.protobuf.TargetingKVOperation;
  * 
  */
 
-public class ArticleId extends AbstractProcessor {
+public class ArticleId2 extends AbstractProcessor {
 
 	public static class RCFileMapper extends RCFileBaseMapper<Text, Text> {
 
@@ -74,11 +74,11 @@ public class ArticleId extends AbstractProcessor {
 			{
 				if (saleleads_cnt > 0) {
 					for(AutoPVInfo pvinfo : pvList)					
-						context.write(new Text(pvinfo.getCururl()), new Text("T"));
+						context.write(new Text(pvinfo.getSite1Id()+":"+pvinfo.getSite2Id()), new Text("T"));
 				} 
 				else {
 					for(AutoPVInfo pvinfo : pvList)					
-						context.write(new Text(pvinfo.getCururl()), new Text("F"));
+						context.write(new Text(pvinfo.getSite1Id()+":"+pvinfo.getSite2Id()), new Text("F"));
 				}
 			}
 			
@@ -98,7 +98,7 @@ public class ArticleId extends AbstractProcessor {
 					pv_f += 1;
 				}
 			}
-			if(pv_f > 100)
+			if(pv_f > 1000)
 				context.write(key, new Text(String.valueOf(pv_t) + "\t" + String.valueOf(pv_f)));
 		}
 	}
