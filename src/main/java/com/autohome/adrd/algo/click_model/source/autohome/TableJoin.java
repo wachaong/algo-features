@@ -26,22 +26,41 @@ public class TableJoin extends AbstractProcessor{
 
 			String[] lines = value.toString().split("\t");
 			StringBuilder sb = new StringBuilder();
-			if(lines.length>2){
-				for (int i=4;i<lines.length;i++){
-					sb.append(lines[i]+"\t");
-				}
-			}else{
-				sb.append(lines[1]);
-			}
+			int startnum=0;
+			if(lines.length==9){
+				startnum=2;
 				
-
+				if(!lines[1].equals("0")){
+				    String[] day =lines[1].split(" ");
+					if(day.length==2){
+					String[] score=day[1].split(":");
+					if(day.length==2&&score.length==3)
+						sb.append(day[0]+":"+score[2]+"\t");
+					
+				}
+			}else if(lines.length==2){
+				startnum=1;
+			}else{
+				//add label
+				context.write(new Text(lines[0]),new Text("label"+"\t"+lines[1]));
+				startnum=2;
+			}
+			
+			
+			for (int i=startnum;i<lines.length;i++){
+				if(!lines[i].equals("0"))
+					sb.append(lines[i]+"\t");
+			}
+			
+			if(sb.toString().length()!=0){
 				context.write(new Text(lines[0]),new Text(sb.toString()));
-	
+			}
+			
 		}
 		
 		
 	}
-	
+	}
 	public static class HReduce extends Reducer<Text, Text, Text, Text> {
 		
 		public void reduce(Text key, Iterable<Text> values, Context context)
@@ -53,12 +72,12 @@ public class TableJoin extends AbstractProcessor{
 			StringBuilder labelsb= new StringBuilder ();
 			StringBuilder featuresb= new StringBuilder ();
 			for (Text value : values) {
-				if(value.toString().split("\t").length==1){
+				if(value.toString().split("\t").length==9){
 					
 					label = value.toString();
 					labelsb.append(value.toString());
 				}
-				else if(value.toString().split("\t").length==8){
+				else if(value.toString().split("\t").length==2){
 					feature=value.toString();
 					featuresb.append(value.toString());
 					
