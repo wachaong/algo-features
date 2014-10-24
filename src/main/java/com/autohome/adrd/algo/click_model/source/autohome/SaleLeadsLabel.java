@@ -56,10 +56,10 @@ public class SaleLeadsLabel extends AbstractProcessor {
 				
 				
 				if (saleleadsList != null && saleleadsList.size() != 0) {
-					context.write(new Text(cookie), new Text("1"));
+					context.write(new Text(cookie), new Text("label"+":1"));
 				} else if (pvList != null && pvList.size() != 0) {
 
-					context.write(new Text(cookie), new Text("0"));
+					context.write(new Text(cookie), new Text("label"+":0"));
 					
 				} 
 			}
@@ -93,7 +93,7 @@ public class SaleLeadsLabel extends AbstractProcessor {
 	protected void configJob(Job job) {
 		job.getConfiguration().set("mapred.job.priority", "VERY_HIGH");
 		job.setMapperClass(RCFileMapper.class);
-		job.setReducerClass(HReduce.class);
+	//	job.setReducerClass(HReduce.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);

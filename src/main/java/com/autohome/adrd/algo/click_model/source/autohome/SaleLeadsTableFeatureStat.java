@@ -16,21 +16,17 @@ public class SaleLeadsTableFeatureStat extends AbstractProcessor{
 	
 	public static class StatMapper extends Mapper<LongWritable, Text, Text, Text>{
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException{
-		//	String filePath = ((FileSplit)reporter.getInputSplit()).getPath().toString(); 
-			//InputSplit inputSplit = context.getInputSplit();
-		//	String fileName = ((FileSplit) inputSplit).getPath().toString();
+	
 			String[] lines = value.toString().split("\t");
 			StringBuilder sb = new StringBuilder();
-			if(lines.length>2){
-				for(int i=1;i<lines.length;i++)
-					if(i==2){
-						context.write(new Text("Timeid"+"\t"+i+"\t"+(int)Float.parseFloat(lines[i])),new Text(lines[0]));
-					}
-					else{
-						context.write(new Text("Timeid"+"\t"+i+"\t"+Integer.parseInt(lines[i])),new Text(lines[0]));
-					}
+			if(lines.length>1){
+				for(int i=1;i<lines.length;i++){
+					String[] featurescore = lines[i].split(":");
+					if(featurescore.length==2)
+					//	context.write(new Text(featurescore[0]),new Text(lines[0]));
+					    context.write(new Text(featurescore[0]+"\t"+(int)Float.parseFloat(featurescore[1])),new Text(lines[0]));
+				}
 			}
-	
 		}
 		
 		
@@ -50,6 +46,7 @@ public class SaleLeadsTableFeatureStat extends AbstractProcessor{
 					pv_cnt += 1;
 				}
 			}
+			
 
 			context.write( key,new Text(String.valueOf(clk_cnt) + "\t" + String.valueOf(pv_cnt)));
 		}
