@@ -48,10 +48,15 @@ public class HistorySaleLeads extends AbstractProcessor {
 		public static final String CG_TAGS = "tags";
 		public static final String CG_APPPV = "apppv";
 		public static final String CG_BEHAVIOR = "behavior";
+		
+		private static String pred_date;
+		private static double decay;
 
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
 			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,addisplay,adclick");
+			pred_date = context.getConfiguration().get("pred_date");
+			decay = context.getConfiguration().getDouble("decay",0.8);
 		}
 
 		@SuppressWarnings({ "unchecked", "deprecation" })
@@ -72,7 +77,7 @@ public class HistorySaleLeads extends AbstractProcessor {
 			Date d;
 			try {
 				d = new SimpleDateFormat("yyyyMMdd").parse(date);
-				Date d2 = new SimpleDateFormat("yyyyMMdd").parse("20141021");
+				Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_date);
 				long diff = d2.getTime() - d.getTime();
 				long days = diff/(1000*60*60*24);
 				
@@ -87,7 +92,7 @@ public class HistorySaleLeads extends AbstractProcessor {
 				{
 					for(SaleleadsInfo pvinfo : saleleadsList)
 					{
-						double score = Math.pow(0.8,days);
+						double score = Math.pow(decay,days);
 						score_total += score;
 					}
 					context.write(new Text(cookie), new Text(String.valueOf(score_total)));
