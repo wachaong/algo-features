@@ -74,15 +74,18 @@ public class RawTarget extends AbstractProcessor {
 
 		private String output_map(HashMap<String, Integer> map, long days) {
 			StringBuilder sb = new StringBuilder();
+			int i = 0;
 			for(Map.Entry<String, Integer> entry : map.entrySet()) {
+				if(i > 0)
+					sb.append(" ");
+				i++;
 				sb.append(entry.getKey());
-				sb.append(" : ");
+			    sb.append(" ");
 				int val = entry.getValue();
 				if(val > 50)
 					val = 50;
 				sb.append(val * Math.pow(decay,days));
-				sb.append(" ");
-				
+									
 			}
 			return sb.toString();
 		}
@@ -142,7 +145,7 @@ public class RawTarget extends AbstractProcessor {
 
 					}
 					
-					if(cookie != null && !cookie.isEmpty() && !dc.isEmpty())
+					if(cookie != null  && !cookie.isEmpty() && !dc.isEmpty())
 						context.write(new Text(cookie), new Text(output_map(dc, days)));	
 					
 				}
@@ -157,31 +160,38 @@ public class RawTarget extends AbstractProcessor {
 	public static class HReduce extends Reducer<Text, Text, Text, Text> {
 		
 		private void string2dict(String str, HashMap<String, Double> ans) {
-			Scanner in = new Scanner(str);
+			if(str == null)
+				return;
 			String key = null;
-			String sep = null;
 			double val;
-			while(in.hasNext()) {
-				key = in.next();
-				sep = in.next();
-				val = in.nextDouble();
+			String[] tmp = str.trim().split(" ");
+			if(tmp.length == 0 || tmp.length % 2 != 0)
+				return;
+			for(int i = 0; i < tmp.length / 2; i += 2)
+			{
+				key = tmp[i];
+				val = Double.parseDouble(tmp[i+1]);
 				if(ans.containsKey(key)) {
 					ans.put(key, ans.get(key) + val);
 				}
 				else {
-					ans.put(key, ans.get(key));
+					ans.put(key, val);
 				}
 			}
 		}
 		
+		
 		private String output_map(HashMap<String, Double> map) {
 			StringBuilder sb = new StringBuilder();
+			int i = 0;
 			for(Map.Entry<String, Double> entry : map.entrySet()) {
+				if(i > 0)
+					sb.append(" ");
+				i++;
 				sb.append(entry.getKey());
-				sb.append(" : ");
+				sb.append(":");
 				double val = entry.getValue();
 				sb.append(val);
-				sb.append(" ");
 				
 			}
 			return sb.toString();
@@ -190,15 +200,13 @@ public class RawTarget extends AbstractProcessor {
 
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 			HashMap<String, Double> dc_score = new HashMap<String, Double>();
-			//HashMap<String, Double> dc_spec_score = new HashMap<String, Double>();
 			for (Text value : values) {
-				//String[] tmp = value.toString().split("|");
-				//if(tmp.length == 0)
-				//	continue;
+				if(value.toString().trim().isEmpty())
+					continue;
 				string2dict(value.toString(), dc_score);
-				
-			}			
-			context.write(key, new Text(output_map(dc_score)));
+			}
+			if(!dc_score.isEmpty())
+			    context.write(key, new Text(output_map(dc_score)));
 		}
 	}
 
