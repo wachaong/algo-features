@@ -24,6 +24,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 
 import com.autohome.adrd.algo.sessionlog.consume.RCFileBaseMapper;
 import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
+import com.autohome.adrd.algo.click_model.data.SparseVector;
 import com.autohome.adrd.algo.protobuf.AdLogOperation;
 import com.autohome.adrd.algo.protobuf.ApplogOperation;
 import com.autohome.adrd.algo.protobuf.PvlogOperation;
@@ -67,7 +68,7 @@ public class RawTarget extends AbstractProcessor {
 				map.put(fea, map.get(fea) + 1);
 			}
 			else
-				map.put(fea, 1);
+				map.put(fea, 1);	
 		}
 		
 
@@ -116,17 +117,33 @@ public class RawTarget extends AbstractProcessor {
 				
 				if(pvList != null && pvList.size() > 0)
 				{
-					HashMap<String, Integer> dc_series = new HashMap<String, Integer>();
+					HashMap<String, Integer> dc = new HashMap<String, Integer>();
 					HashMap<String, Integer> dc_spec = new HashMap<String, Integer>();
 					for(PvlogOperation.AutoPVInfo pvinfo : pvList) {
-						add(pvinfo.getSeriesid(), dc_series);
-						add(pvinfo.getSpecid(), dc_spec);
+						String seriesId = pvinfo.getSeriesid();
+						int series;
+						try {
+							series = Integer.parseInt(seriesId);
+							add("seriesId@" + series, dc);
+						}
+						catch(Exception e) {
+							;
+						}
+						
+						String specId = pvinfo.getSeriesid();
+						int spec;
+						try {
+							spec = Integer.parseInt(specId);
+							add("specId@" + spec, dc);
+						}
+						catch(Exception e) {
+							;
+						}
 
 					}
 					
-					context.write(new Text(cookie), new Text(output_map(dc_series, days) + " | " 
-							                                 + output_map(dc_spec, days)));
-					
+					if(cookie != null && !cookie.isEmpty() && !dc.isEmpty())
+						context.write(new Text(cookie), new Text(output_map(dc, days)));	
 					
 				}
 				} catch (ParseException e) {
@@ -172,19 +189,16 @@ public class RawTarget extends AbstractProcessor {
 
 
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-			HashMap<String, Double> dc_series_score = new HashMap<String, Double>();
-			HashMap<String, Double> dc_spec_score = new HashMap<String, Double>();
+			HashMap<String, Double> dc_score = new HashMap<String, Double>();
+			//HashMap<String, Double> dc_spec_score = new HashMap<String, Double>();
 			for (Text value : values) {
-				String[] tmp = value.toString().split("|");
-				if(tmp.length == 0)
-					continue;
-				string2dict(tmp[0], dc_series_score);
-				if(tmp.length > 1)
-					string2dict(tmp[1], dc_spec_score);
+				//String[] tmp = value.toString().split("|");
+				//if(tmp.length == 0)
+				//	continue;
+				string2dict(value.toString(), dc_score);
 				
 			}			
-			context.write(key, new Text(output_map(dc_series_score) + " | " 
-					                    + output_map(dc_spec_score)));
+			context.write(key, new Text(output_map(dc_score)));
 		}
 	}
 
