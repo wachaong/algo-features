@@ -75,9 +75,7 @@ public class UserInfo extends AbstractProcessor {
 		public void map(LongWritable key, BytesRefArrayWritable value, Context context) throws IOException, InterruptedException {
 			List<PvlogOperation.AutoPVInfo> pvList = new ArrayList<PvlogOperation.AutoPVInfo>();
 			
-			//Pattern pattern = Pattern.compile("^[-\\+]?[\\d]*$");
 			decode(key, value);
-
 			pvList = (List<PvlogOperation.AutoPVInfo>) list.get(CG_PV);
 			String cookie = (String) list.get("user");
 			
@@ -107,74 +105,32 @@ public class UserInfo extends AbstractProcessor {
 				}
 				
 				if(!dc_province.isEmpty())
-					context.write(new Text(cookie), new Text(dc_max(dc_province) + "," + dc_max(dc_city)));
+					context.write(new Text(cookie), new Text("province@" +
+				                                             dc_max(dc_province) + " " +
+							                                 "city@" + dc_max(dc_city)));
 
 			}
-			
-	//		String path=((FileSplit)context.getInputSplit()).getPath().toString();
-	//		String date = path.split("sessionlog")[1].split("part")[0].replaceAll("/", "");
-	//		Date d;
-	/*		try {
-				d = new SimpleDateFormat("yyyyMMdd").parse(date);
-				Date d2 = new SimpleDateFormat("yyyyMMdd").parse("20141021");
-				long diff = d2.getTime() - d.getTime();
-				long days = diff/(1000*60*60*24);
-				
-				int pv_cnt = 0;
-				if (pvList != null && pvList.size() != 0)
-					pv_cnt = pvList.size();
-				
-				if(pv_cnt > 0)
-				{
-					for(AutoPVInfo pvinfo : pvList)
-					{
-						double score = Math.pow(0.9,days);
-						if(pattern.matcher(pvinfo.getSite1Id()).matches() && pattern.matcher(pvinfo.getSite2Id()).matches() )
-							context.write(new Text(cookie), new Text(pvinfo.getSite1Id()+"&"+pvinfo.getSite2Id()+":"+String.valueOf(score)));
-					}
-				}
-				
-			} catch (ParseException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}*/
-																		
+													
 		}
 	}
 
-/*	public static class HReduce extends Reducer<Text, Text, Text, Text> {
+	public static class HReduce extends Reducer<Text, Text, Text, Text> {
 
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 
 			HashMap<String , Double> map = new HashMap<String , Double>(); 
 			for (Text value : values) {
-				String [] segs = value.toString().split(":");
-				if(map.containsKey(segs[0]))
-				{
-					double temp = map.get(segs[0]) + Double.valueOf(segs[1]);
-					map.put(segs[0], temp);
-				}
-				else
-					map.put(segs[0], Double.valueOf(segs[1]));			
+				context.write(key, value);
+				return;
 			}
-			StringBuilder sb = new StringBuilder();
-			for (Map.Entry<String, Double> entry : map.entrySet())
-			{
-				sb.append(entry.getKey());
-				sb.append(":");
-				sb.append(entry.getValue());
-				sb.append(",");
-			}
-			
-			context.write(key, new Text(sb.toString()));
 		}
-	}*/
+	}
 
 	@Override
 	protected void configJob(Job job) {
 		job.getConfiguration().set("mapred.job.priority", "VERY_HIGH");
 		job.setMapperClass(RCFileMapper.class);
-		//job.setReducerClass(HReduce.class);
+		job.setReducerClass(HReduce.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);

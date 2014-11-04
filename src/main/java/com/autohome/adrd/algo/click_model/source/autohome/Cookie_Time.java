@@ -70,7 +70,7 @@ public class Cookie_Time extends AbstractProcessor {
 				Date d;
 				try {
 					d = new SimpleDateFormat("yyyyMMdd").parse(date);
-					Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_date);
+					Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_date.replaceAll("/", ""));
 					long diff = d2.getTime() - d.getTime();
 					Long days = diff/(1000*60*60*24);
 					context.write(new Text(cookie), new Text(days.toString()));
