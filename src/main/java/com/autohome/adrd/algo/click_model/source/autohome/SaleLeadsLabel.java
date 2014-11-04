@@ -70,30 +70,12 @@ public class SaleLeadsLabel extends AbstractProcessor {
 		}
 	}
 
-	public static class HReduce extends Reducer<Text, Text, Text, Text> {
-
-		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-
-			int pv_cnt = 0, clk_cnt = 0;
-			for (Text value : values) {
-				if (value.toString().equals("1")) {
-					pv_cnt += 1;
-					clk_cnt += 1;
-				}
-				if (value.toString().equals("0")) {
-					pv_cnt += 1;
-				}
-			}
-
-			context.write(key,new Text(String.valueOf(clk_cnt) + "\t" + String.valueOf(pv_cnt)) );
-		}
-	}
+	
 
 	@Override
 	protected void configJob(Job job) {
 		job.getConfiguration().set("mapred.job.priority", "VERY_HIGH");
 		job.setMapperClass(RCFileMapper.class);
-	//	job.setReducerClass(HReduce.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);

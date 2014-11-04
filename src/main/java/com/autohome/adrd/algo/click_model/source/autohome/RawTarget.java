@@ -55,12 +55,15 @@ public class RawTarget extends AbstractProcessor {
 		
 		private static String pred_date;
 		private static double decay;
+		
 
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
 			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,behavior,tags,addisplay,adclick,pv");
 			pred_date = context.getConfiguration().get("pred_date");
 			decay = context.getConfiguration().getDouble("decay",0.6);
+			////equal value discretization
+			
 		}
 		
 		private void add(String fea, HashMap<String, Integer> map) {
@@ -77,10 +80,10 @@ public class RawTarget extends AbstractProcessor {
 			int i = 0;
 			for(Map.Entry<String, Integer> entry : map.entrySet()) {
 				if(i > 0)
-					sb.append(" ");
+					sb.append("\t");
 				i++;
 				sb.append(entry.getKey());
-			    sb.append(" ");
+			    sb.append("\t");
 				int val = entry.getValue();
 				if(val > 50)
 					val = 50;
@@ -158,13 +161,20 @@ public class RawTarget extends AbstractProcessor {
 	}
 
 	public static class HReduce extends Reducer<Text, Text, Text, Text> {
+		private static double discret;
+		public void setup(Context context) throws IOException, InterruptedException {
+			super.setup(context);
+			
+			////equal value discretization
+			discret = context.getConfiguration().getDouble("discret",0.01);
+		}
 		
 		private void string2dict(String str, HashMap<String, Double> ans) {
 			if(str == null)
 				return;
 			String key = null;
 			double val;
-			String[] tmp = str.trim().split(" ");
+			String[] tmp = str.trim().split("\t");
 			if(tmp.length == 0 || tmp.length % 2 != 0)
 				return;
 			for(int i = 0; i < tmp.length / 2; i += 2)
@@ -186,12 +196,14 @@ public class RawTarget extends AbstractProcessor {
 			int i = 0;
 			for(Map.Entry<String, Double> entry : map.entrySet()) {
 				if(i > 0)
-					sb.append(" ");
+					sb.append("\t");
 				i++;
 				sb.append(entry.getKey());
 				sb.append(":");
 				double val = entry.getValue();
-				sb.append(val);
+				//equal value discretization
+				int discretval=(int)(val/discret);
+				sb.append(discretval);
 				
 			}
 			return sb.toString();
@@ -206,6 +218,7 @@ public class RawTarget extends AbstractProcessor {
 				string2dict(value.toString(), dc_score);
 			}
 			if(!dc_score.isEmpty())
+				
 			    context.write(key, new Text(output_map(dc_score)));
 		}
 	}

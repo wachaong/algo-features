@@ -23,7 +23,6 @@ public class SaleLeadsTableFeatureStat extends AbstractProcessor{
 				for(int i=1;i<lines.length;i++){
 					String[] featurescore = lines[i].split(":");
 					if(featurescore.length==2)
-					//	context.write(new Text(featurescore[0]),new Text(lines[0]));
 					    context.write(new Text(featurescore[0]+"\t"+(int)Float.parseFloat(featurescore[1])),new Text(lines[0]));
 				}
 			}

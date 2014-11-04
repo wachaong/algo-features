@@ -29,19 +29,7 @@ public class TableJoin extends AbstractProcessor{
 
 			StringBuilder sb = new StringBuilder();
 			int startnum=1;
-			if(lines.length==9){
-				startnum=2;
-				
-//				if(!lines[1].equals("0")){
-//				    String[] day =lines[1].split(" ");
-//					if(day.length==2){
-//					String[] score=day[1].split(":");
-//					if(day.length==2&&score.length==3)
-//						sb.append(day[0]+":"+score[2]+"\t");
-//					}
-//				}
-			}
-			
+
 			
 			for (int i=startnum;i<lines.length;i++){
 
