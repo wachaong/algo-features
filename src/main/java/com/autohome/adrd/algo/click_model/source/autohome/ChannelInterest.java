@@ -47,10 +47,15 @@ public class ChannelInterest extends AbstractProcessor {
 		public static final String CG_TAGS = "tags";
 		public static final String CG_APPPV = "apppv";
 		public static final String CG_BEHAVIOR = "behavior";
+		
+		private static String pred_date;
+		private static double decay;
 
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
 			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,addisplay,adclick");
+			pred_date = context.getConfiguration().get("pred_date");
+			decay = context.getConfiguration().getDouble("decay",0.9);
 		}
 
 		@SuppressWarnings({ "unchecked", "deprecation" })
@@ -68,7 +73,7 @@ public class ChannelInterest extends AbstractProcessor {
 			Date d;
 			try {
 				d = new SimpleDateFormat("yyyyMMdd").parse(date);
-				Date d2 = new SimpleDateFormat("yyyyMMdd").parse("20141021");
+				Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_date.replaceAll("/", ""));
 				long diff = d2.getTime() - d.getTime();
 				long days = diff/(1000*60*60*24);
 				
@@ -80,9 +85,9 @@ public class ChannelInterest extends AbstractProcessor {
 				{
 					for(AutoPVInfo pvinfo : pvList)
 					{
-						double score = Math.pow(0.9,days);
+						double score = Math.pow(decay,days);
 						if(pattern.matcher(pvinfo.getSite1Id()).matches() && pattern.matcher(pvinfo.getSite2Id()).matches() )
-							context.write(new Text(cookie), new Text(pvinfo.getSite1Id()+"&"+pvinfo.getSite2Id()+":"+String.valueOf(score)));
+							context.write(new Text(cookie), new Text("site1Id&site2Id@" + pvinfo.getSite1Id()+"&"+pvinfo.getSite2Id()+":"+String.valueOf(score)));
 					}
 				}
 				
@@ -110,12 +115,16 @@ public class ChannelInterest extends AbstractProcessor {
 					map.put(segs[0], Double.valueOf(segs[1]));			
 			}
 			StringBuilder sb = new StringBuilder();
+			int i = 0;
 			for (Map.Entry<String, Double> entry : map.entrySet())
 			{
+				if(i > 0)
+					sb.append("\t");
+				i++;
 				sb.append(entry.getKey());
 				sb.append(":");
 				sb.append(entry.getValue());
-				sb.append(",");
+				//sb.append(",");
 			}
 			
 			context.write(key, new Text(sb.toString()));
