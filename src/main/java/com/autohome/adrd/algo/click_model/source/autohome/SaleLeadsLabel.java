@@ -64,9 +64,6 @@ public class SaleLeadsLabel extends AbstractProcessor {
 				} 
 			}
 			
-			
-			
-			
 		}
 	}
 
