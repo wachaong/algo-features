@@ -106,8 +106,8 @@ public class UserInfo extends AbstractProcessor {
 				
 				if(!dc_province.isEmpty())
 					context.write(new Text(cookie), new Text("province@" +
-				                                             dc_max(dc_province) + " " +
-							                                 "city@" + dc_max(dc_city)));
+				                                             dc_max(dc_province) + ":1" + "\t" +
+							                                 "city@" + dc_max(dc_city) + ":1"));
 
 			}
 													

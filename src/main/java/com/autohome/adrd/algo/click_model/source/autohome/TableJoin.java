@@ -89,7 +89,7 @@ public class TableJoin extends AbstractProcessor{
 				if(featuresb.toString().length()!=0){
 					context.write(new Text(label), new Text(featuresb.toString()));
 				}else{
-					context.write(new Text(label), new Text("new"));
+					context.write(new Text(label), new Text("new:1"));
 				}
 			}
 		}

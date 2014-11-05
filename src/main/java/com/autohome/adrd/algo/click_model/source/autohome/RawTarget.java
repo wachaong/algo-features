@@ -202,8 +202,9 @@ public class RawTarget extends AbstractProcessor {
 				sb.append(":");
 				double val = entry.getValue();
 				//equal value discretization
-				int discretval=(int)(val/discret);
-				sb.append(discretval);
+				//int discretval=(int)(val/discret);
+				//sb.append(discretval);
+				sb.append(val);
 				
 			}
 			return sb.toString();

@@ -87,7 +87,7 @@ public class ChannelInterest extends AbstractProcessor {
 					{
 						double score = Math.pow(decay,days);
 						if(pattern.matcher(pvinfo.getSite1Id()).matches() && pattern.matcher(pvinfo.getSite2Id()).matches() )
-							context.write(new Text(cookie), new Text("site1Id&site2Id@" + pvinfo.getSite1Id()+"&"+pvinfo.getSite2Id()+":"+String.valueOf(score)));
+							context.write(new Text(cookie), new Text("channel@" + pvinfo.getSite1Id()+"#"+pvinfo.getSite2Id()+":"+String.valueOf(score)));
 					}
 				}
 				
