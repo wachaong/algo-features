@@ -96,13 +96,9 @@ public class RawTarget extends AbstractProcessor {
 		@SuppressWarnings({ "unchecked", "deprecation" })
 		public void map(LongWritable key, BytesRefArrayWritable value, Context context) throws IOException, InterruptedException {
 			
-			List<SaleleadsInfoOperation.SaleleadsInfo> saleleadsList = new ArrayList<SaleleadsInfoOperation.SaleleadsInfo>();
 			List<PvlogOperation.AutoPVInfo> pvList = new ArrayList<PvlogOperation.AutoPVInfo>();
-			
-			Pattern pattern = Pattern.compile("^[-\\+]?[\\d]*$");
 			decode(key, value);
 
-			saleleadsList = (List<SaleleadsInfoOperation.SaleleadsInfo>) list.get(CG_SALE_LEADS);
 			pvList = (List<PvlogOperation.AutoPVInfo>) list.get(CG_PV);
 			String cookie = (String) list.get("user");
 			
@@ -110,21 +106,15 @@ public class RawTarget extends AbstractProcessor {
 			String date = path.split("sessionlog")[1].split("part")[0].replaceAll("/", "");
 			Date d;
 			
-				try {
-					d = new SimpleDateFormat("yyyyMMdd").parse(date);
-			
-				Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_date);
+			try {
+				d = new SimpleDateFormat("yyyyMMdd").parse(date);
+				Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_date.replaceAll("/", ""));
 				long diff = d2.getTime() - d.getTime();
 				long days = diff/(1000*60*60*24);
-				
-				//int saleleads_cnt = 0, pv_cnt = 0;
-				pvList = (List<PvlogOperation.AutoPVInfo>) list.get(CG_PV);
-				
 				
 				if(pvList != null && pvList.size() > 0)
 				{
 					HashMap<String, Integer> dc = new HashMap<String, Integer>();
-					HashMap<String, Integer> dc_spec = new HashMap<String, Integer>();
 					for(PvlogOperation.AutoPVInfo pvinfo : pvList) {
 						String seriesId = pvinfo.getSeriesid();
 						int series;
@@ -156,7 +146,6 @@ public class RawTarget extends AbstractProcessor {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-			
 	}
 	}
 

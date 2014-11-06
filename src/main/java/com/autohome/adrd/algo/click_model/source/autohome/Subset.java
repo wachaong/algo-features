@@ -2,7 +2,7 @@ package com.autohome.adrd.algo.click_model.source.autohome;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
+//import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Scanner;
 
@@ -33,7 +33,7 @@ public class Subset extends AbstractProcessor{
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
 			filename = context.getConfiguration().get("feature_list");
-			Scanner in = new Scanner(Paths.get(filename));
+			Scanner in = new Scanner(new File(filename));
 			while(in.hasNext()) {
 				chosen_features.add(in.next());
 			}
@@ -50,9 +50,11 @@ public class Subset extends AbstractProcessor{
 			int startnum=1;
 			int j = 0;
 			for (int i=startnum;i<lines.length;i++){
-				if(!lines[i].equals("0")&&!lines[i].trim().equals("")){
+				if(!lines[i].equals("0")&&!lines[i].trim().equals("") ){
 					String[] feature=lines[i].split(":");
-					if(chosen_features.contains(feature[0])) {
+					if(chosen_features.contains(feature[0])
+							|| feature[0].contains("province")
+							|| feature[0].contains("city")) {
 					    if(j > 0) {
 						    sb.append("\t");
 					    }
