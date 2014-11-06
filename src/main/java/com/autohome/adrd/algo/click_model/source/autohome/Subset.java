@@ -64,8 +64,8 @@ public class Subset extends AbstractProcessor{
 
 				}
 			}
-		
-			context.write(new Text(lines[0]), new Text(sb.toString()));
+		    if(!sb.toString().isEmpty())
+		    	context.write(new Text(lines[0]), new Text(sb.toString()));
 
 			}
 

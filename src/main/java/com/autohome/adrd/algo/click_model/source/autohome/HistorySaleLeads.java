@@ -38,6 +38,7 @@ import com.autohome.adrd.algo.protobuf.TargetingKVOperation;
  */
 
 public class HistorySaleLeads extends AbstractProcessor {
+	
 
 	public static class RCFileMapper extends RCFileBaseMapper<Text, Text> {
 
@@ -51,12 +52,15 @@ public class HistorySaleLeads extends AbstractProcessor {
 		
 		private static String pred_date;
 		private static double decay;
+		private static int days_history;
+		
 
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
 			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,addisplay,adclick");
 			pred_date = context.getConfiguration().get("pred_date");
 			decay = context.getConfiguration().getDouble("decay",0.8);
+			days_history = context.getConfiguration().getInt("history_days", 7);
 		}
 
 		@SuppressWarnings({ "unchecked", "deprecation" })
@@ -77,7 +81,7 @@ public class HistorySaleLeads extends AbstractProcessor {
 			Date d;
 			try {
 				d = new SimpleDateFormat("yyyyMMdd").parse(date);
-				Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_date);
+				Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_date.replaceAll("/", ""));
 				long diff = d2.getTime() - d.getTime();
 				long days = diff/(1000*60*60*24);
 				
@@ -95,7 +99,7 @@ public class HistorySaleLeads extends AbstractProcessor {
 						double score = Math.pow(decay,days);
 						score_total += score;
 					}
-					context.write(new Text(cookie), new Text(String.valueOf(score_total)));
+					context.write(new Text(cookie), new Text(String.valueOf(score_total) + "\t" + days_history));
 				}
 				
 			} catch (ParseException e) {
@@ -107,14 +111,18 @@ public class HistorySaleLeads extends AbstractProcessor {
 	}
 
 	public static class HReduce extends Reducer<Text, Text, Text, Text> {
+		
 
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 
 			double score_total = 0.0;
+			String days = null;
 			for (Text value : values) {
-				score_total += Double.valueOf(value.toString());
+				String[] tmp = value.toString().split("\t");
+				days = tmp[1];
+				score_total += Double.valueOf(tmp[0]);
 			}			
-			context.write(key, new Text(String.valueOf(score_total)));
+			context.write(key, new Text("history" + days + ":" + String.valueOf(score_total)));
 		}
 	}
 
