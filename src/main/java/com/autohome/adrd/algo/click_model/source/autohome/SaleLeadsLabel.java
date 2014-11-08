@@ -45,22 +45,16 @@ public class SaleLeadsLabel extends AbstractProcessor {
 			decode(key, value);
 
 			pvList = (List<PvlogOperation.AutoPVInfo>) list.get(CG_PV);
-			app_pvList = (List<ApplogOperation.AutoAppInfo>) list.get(CG_APPPV);
 			saleleadsList = (List<SaleleadsInfoOperation.SaleleadsInfo>) list.get(CG_SALE_LEADS);
-
-			TargetingKVOperation.TargetingInfo targeting = (TargetingKVOperation.TargetingInfo) list.get(CG_TAGS);
 			String cookie = (String)list.get(CG_USER);
 
 			StringBuilder sb = new StringBuilder();
-			if (targeting != null) {
-				
-				
+			if (pvList != null && pvList.size() != 0) //only pc and m
+			{				
 				if (saleleadsList != null && saleleadsList.size() != 0) {
 					context.write(new Text(cookie), new Text("label"+":1"));
 				} else if (pvList != null && pvList.size() != 0) {
-
-					context.write(new Text(cookie), new Text("label"+":0"));
-					
+					context.write(new Text(cookie), new Text("label"+":0"));					
 				} 
 			}
 			
