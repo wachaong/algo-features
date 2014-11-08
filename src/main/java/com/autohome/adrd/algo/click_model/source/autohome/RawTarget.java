@@ -221,7 +221,7 @@ public class RawTarget extends AbstractProcessor {
 		job.getConfiguration().set("mapred.job.priority", "VERY_HIGH");
 		job.setMapperClass(RCFileMapper.class);
 		job.setReducerClass(HReduce.class);
-		job.setCombinerClass(HReduce.class);
+		//job.setCombinerClass(HReduce.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);

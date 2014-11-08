@@ -77,7 +77,7 @@ public class HistorySaleLeads extends AbstractProcessor {
 			String cookie = (String) list.get("user");
 			
 			String path=((FileSplit)context.getInputSplit()).getPath().toString();
-			String date = path.split("sessionlog")[1].split("part")[0].replaceAll("/", "");
+			String date = path.split("sessionlog_sale")[1].split("part")[0].replaceAll("/", "");
 			Date d;
 			try {
 				d = new SimpleDateFormat("yyyyMMdd").parse(date);
