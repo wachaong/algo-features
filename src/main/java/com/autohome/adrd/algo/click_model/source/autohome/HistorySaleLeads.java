@@ -119,7 +119,7 @@ public class HistorySaleLeads extends AbstractProcessor {
 			String days = null;
 			for (Text value : values) {
 				String[] tmp = value.toString().split("\t");
-				days = tmp[1];
+				days = tmp[1].trim();
 				score_total += Double.valueOf(tmp[0]);
 			}			
 			context.write(key, new Text("history" + days + ":" + String.valueOf(score_total)));

@@ -42,7 +42,7 @@ import com.autohome.adrd.algo.protobuf.TargetingKVOperation;
 public class RawTarget extends AbstractProcessor {
 	
 	
-
+	
 	public static class RCFileMapper extends RCFileBaseMapper<Text, Text> {
 
 		public static final String CG_USER = "user";
@@ -55,6 +55,8 @@ public class RawTarget extends AbstractProcessor {
 		
 		private static String pred_date;
 		private static double decay;
+		private static int days_history;
+		
 		
 
 		public void setup(Context context) throws IOException, InterruptedException {
@@ -62,6 +64,7 @@ public class RawTarget extends AbstractProcessor {
 			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,behavior,tags,addisplay,adclick,pv");
 			pred_date = context.getConfiguration().get("pred_date");
 			decay = context.getConfiguration().getDouble("decay",0.6);
+			days_history = context.getConfiguration().getInt("history_days", 7);
 			////equal value discretization
 			
 		}
@@ -120,7 +123,7 @@ public class RawTarget extends AbstractProcessor {
 						int series;
 						try {
 							series = Integer.parseInt(seriesId);
-							add("seriesId@" + series, dc);
+							add("seriesId" + days_history + "@" + series, dc);
 						}
 						catch(Exception e) {
 							;
@@ -130,7 +133,7 @@ public class RawTarget extends AbstractProcessor {
 						int spec;
 						try {
 							spec = Integer.parseInt(specId);
-							add("specId@" + spec, dc);
+							add("specId"+ days_history + "@" + spec, dc);
 						}
 						catch(Exception e) {
 							;
@@ -218,6 +221,7 @@ public class RawTarget extends AbstractProcessor {
 		job.getConfiguration().set("mapred.job.priority", "VERY_HIGH");
 		job.setMapperClass(RCFileMapper.class);
 		job.setReducerClass(HReduce.class);
+		job.setCombinerClass(HReduce.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);

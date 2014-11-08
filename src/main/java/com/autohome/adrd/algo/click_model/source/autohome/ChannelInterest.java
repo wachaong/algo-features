@@ -50,12 +50,15 @@ public class ChannelInterest extends AbstractProcessor {
 		
 		private static String pred_date;
 		private static double decay;
+		private static int days_history;
+		
 
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
 			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,addisplay,adclick");
 			pred_date = context.getConfiguration().get("pred_date");
 			decay = context.getConfiguration().getDouble("decay",0.9);
+			days_history = context.getConfiguration().getInt("history_days", 7);
 		}
 
 		@SuppressWarnings({ "unchecked", "deprecation" })
@@ -87,7 +90,7 @@ public class ChannelInterest extends AbstractProcessor {
 					{
 						double score = Math.pow(decay,days);
 						if(pattern.matcher(pvinfo.getSite1Id()).matches() && pattern.matcher(pvinfo.getSite2Id()).matches() )
-							context.write(new Text(cookie), new Text("channel@" + pvinfo.getSite1Id()+"#"+pvinfo.getSite2Id()+":"+String.valueOf(score)));
+							context.write(new Text(cookie), new Text("channel" + days_history + "@" + pvinfo.getSite1Id()+"#"+pvinfo.getSite2Id()+":"+String.valueOf(score)));
 					}
 				}
 				
