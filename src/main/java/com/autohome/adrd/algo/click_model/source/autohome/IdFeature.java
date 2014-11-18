@@ -23,6 +23,7 @@ public class IdFeature extends AbstractProcessor{
 		protected void setup(Context context) throws IOException,InterruptedException {
 
 			id_name = context.getConfiguration().get("id_file", "featureid");
+			// read featur id map
 			featureid =  CommonDataAndFunc.readMapBySep(id_name, "utf8", 2);
 			
 
