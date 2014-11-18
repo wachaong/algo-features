@@ -67,13 +67,13 @@ public class HistorySaleLeads extends AbstractProcessor {
 		public void map(LongWritable key, BytesRefArrayWritable value, Context context) throws IOException, InterruptedException {
 			
 			List<SaleleadsInfoOperation.SaleleadsInfo> saleleadsList = new ArrayList<SaleleadsInfoOperation.SaleleadsInfo>();
-			List<PvlogOperation.AutoPVInfo> pvList = new ArrayList<PvlogOperation.AutoPVInfo>();
+			//List<PvlogOperation.AutoPVInfo> pvList = new ArrayList<PvlogOperation.AutoPVInfo>();
 			
 			Pattern pattern = Pattern.compile("^[-\\+]?[\\d]*$");
 			decode(key, value);
 
 			saleleadsList = (List<SaleleadsInfoOperation.SaleleadsInfo>) list.get(CG_SALE_LEADS);
-			pvList = (List<PvlogOperation.AutoPVInfo>) list.get(CG_PV);
+			//pvList = (List<PvlogOperation.AutoPVInfo>) list.get(CG_PV);
 			String cookie = (String) list.get("user");
 			
 			String path=((FileSplit)context.getInputSplit()).getPath().toString();
@@ -85,14 +85,15 @@ public class HistorySaleLeads extends AbstractProcessor {
 				long diff = d2.getTime() - d.getTime();
 				long days = diff/(1000*60*60*24);
 				
-				int saleleads_cnt = 0, pv_cnt = 0;
+				int saleleads_cnt = 0;//, pv_cnt = 0;
 				if (saleleadsList != null && saleleadsList.size() != 0)
 					saleleads_cnt = saleleadsList.size();
-				if (pvList != null && pvList.size() != 0)
-					pv_cnt = pvList.size();
+				//if (pvList != null && pvList.size() != 0)
+				//	pv_cnt = pvList.size();
 				
 				double score_total = 0;
-				if(saleleads_cnt > 0 && pv_cnt > 0)
+				//if(saleleads_cnt > 0 && pv_cnt > 0)
+				if(saleleads_cnt > 0 )
 				{
 					for(SaleleadsInfo pvinfo : saleleadsList)
 					{

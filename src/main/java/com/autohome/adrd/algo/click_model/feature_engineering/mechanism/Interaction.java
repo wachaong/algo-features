@@ -39,8 +39,7 @@ public class Interaction implements Transformer {
 		try {
 			in = new Scanner(new File(file_path));
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			return;
 		}
 		String fea1, fea2;
 		while(in.hasNext()) {
@@ -63,7 +62,7 @@ public class Interaction implements Transformer {
 			for(String fea2 : sample_in.getIdFeatures()) {
 				if(fea1.compareTo(fea2) < 0) {
 					String new_feature = fea1 + sep + fea2;
-					if(inter_feature.contains(new_feature)) 
+					if(inter_feature.contains(new_feature) || inter_feature.isEmpty()) 
 						sample_out.getIdFeatures().add(new_feature);
 				}
 			}

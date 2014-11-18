@@ -63,6 +63,7 @@ public class TableJoin extends AbstractProcessor{
 			
 			StringBuilder labelsb= new StringBuilder ();
 			StringBuilder featuresb= new StringBuilder ();
+
 			for (Text value : values) {
 				
 				String[] lines=value.toString().split("\t");
@@ -70,9 +71,11 @@ public class TableJoin extends AbstractProcessor{
 				for(int i=0;i<lines.length;i++){
 					if(lines[i].equals("label:0")){
 						label="0";
+
 					}
 					else if(lines[i].equals("label:1")){
 						label="1";
+
 					}
 					else{
 						if(feature_num > 0)
@@ -88,9 +91,9 @@ public class TableJoin extends AbstractProcessor{
 			if(!label.equals("")){
 				if(featuresb.toString().length()!=0){
 					context.write(new Text(label), new Text(featuresb.toString()));
-				}else{
-					context.write(new Text(label), new Text("new:1"));
-				}
+				}//else{
+				//	context.write(new Text(label), new Text("new:1"));
+				//}
 			}
 		}
 	}
