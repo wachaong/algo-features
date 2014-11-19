@@ -251,7 +251,7 @@ public class RawTarget extends AbstractProcessor {
 			    if(i<3)
 			    {
 			    	ratio_top3 += spec_lst.get(i).getValue();
-			    	price_mean += spec_lst.get(i).getValue();
+			    	price_mean += Double.valueOf(spec_price_map.get(spec_lst.get(i).getKey()));
 			    	cnt_var ++;
 			    }
 			    sum += spec_lst.get(i).getValue();
@@ -262,7 +262,7 @@ public class RawTarget extends AbstractProcessor {
 			for (int i = 0; i < spec_lst.size(); i++) {
 				if(i>=3)
 					break;
-				sum_var += Math.pow(spec_lst.get(i).getValue() - price_mean, 2);				
+				sum_var += Math.pow(Double.valueOf(spec_price_map.get(spec_lst.get(i).getKey())) - price_mean, 2);				
 			}
 			
 			price_var = Math.sqrt(sum_var/cnt_var);
