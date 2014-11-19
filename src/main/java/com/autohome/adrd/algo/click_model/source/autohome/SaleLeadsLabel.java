@@ -88,7 +88,7 @@ public class SaleLeadsLabel extends AbstractProcessor {
 	@Override
 	protected void configJob(Job job) {
 		job.getConfiguration().set("mapred.job.priority", "VERY_HIGH");
-		job.setMapperClass(RCFileMapper.class);
+		job.setMapperClass(LabelMapper.class);
 		job.setCombinerClass(HReduce.class);
 		job.setReducerClass(HReduce.class);
 		job.setMapOutputKeyClass(Text.class);
