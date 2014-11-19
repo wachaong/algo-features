@@ -2,8 +2,10 @@ package com.autohome.adrd.algo.click_model.source.autohome;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hive.serde2.columnar.BytesRefArrayWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -60,13 +62,30 @@ public class SaleLeadsLabel extends AbstractProcessor {
 			
 		}
 	}
+	
+	public static class HReduce extends Reducer<Text, Text, Text, Text> {
 
+		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+			int label = 0;
+			for (Text value : values) {
+				String [] segs = value.toString().split(":");
+				if(segs[1] == "1")
+				{
+					label = 1;
+					break;
+				}
+			}
+			context.write(key, new Text("label:" + label));
+		}
+	}
 	
 
 	@Override
 	protected void configJob(Job job) {
 		job.getConfiguration().set("mapred.job.priority", "VERY_HIGH");
 		job.setMapperClass(RCFileMapper.class);
+		job.setCombinerClass(HReduce.class);
+		job.setReducerClass(HReduce.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);
