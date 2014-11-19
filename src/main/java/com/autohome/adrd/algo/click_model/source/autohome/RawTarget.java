@@ -4,38 +4,33 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
-import java.util.regex.Pattern;
 
 import org.apache.hadoop.hive.serde2.columnar.BytesRefArrayWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
-import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Reducer;
 
 import com.autohome.adrd.algo.sessionlog.consume.RCFileBaseMapper;
 import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
-import com.autohome.adrd.algo.click_model.data.SparseVector;
-import com.autohome.adrd.algo.protobuf.AdLogOperation;
-import com.autohome.adrd.algo.protobuf.ApplogOperation;
 import com.autohome.adrd.algo.protobuf.PvlogOperation;
-import com.autohome.adrd.algo.protobuf.PvlogOperation.AutoPVInfo;
-import com.autohome.adrd.algo.protobuf.SaleleadsInfoOperation;
-import com.autohome.adrd.algo.protobuf.SaleleadsInfoOperation.SaleleadsInfo;
-import com.autohome.adrd.algo.protobuf.TargetingKVOperation;
 
 /**
  * 
  * @author [Wangchao: wangchao@autohome.com.cn ]
+ * 
+ * 输出用户过去一段时间内常浏览的车型，车系, 车型价格
+ * 以及计算用户喜欢车型 车系 车型价格的集中程度:类似异众比率的计算方式
+ * 异众比率:specRatio1,3 seriesRatio1,3
+ * 感兴趣的车型车系个数:seriesCnt specCnt
+ * 感兴趣的车型价格均值和方差:specVar specMean
  * 
  */
 
@@ -56,17 +51,14 @@ public class RawTarget extends AbstractProcessor {
 		private static String pred_date;
 		private static double decay;
 		private static int days_history;
-		
-		
+				
 
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
 			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,behavior,tags,addisplay,adclick,pv");
 			pred_date = context.getConfiguration().get("pred_date");
 			decay = context.getConfiguration().getDouble("decay",0.6);
-			days_history = context.getConfiguration().getInt("history_days", 7);
-			////equal value discretization
-			
+			days_history = context.getConfiguration().getInt("history_days", 7);					
 		}
 		
 		private void add(String fea, HashMap<String, Integer> map) {
@@ -96,7 +88,7 @@ public class RawTarget extends AbstractProcessor {
 			return sb.toString();
 		}
 
-		@SuppressWarnings({ "unchecked", "deprecation" })
+		@SuppressWarnings("unchecked")
 		public void map(LongWritable key, BytesRefArrayWritable value, Context context) throws IOException, InterruptedException {
 			
 			List<PvlogOperation.AutoPVInfo> pvList = new ArrayList<PvlogOperation.AutoPVInfo>();
@@ -119,30 +111,20 @@ public class RawTarget extends AbstractProcessor {
 				{
 					HashMap<String, Integer> dc = new HashMap<String, Integer>();
 					for(PvlogOperation.AutoPVInfo pvinfo : pvList) {
-						String seriesId = pvinfo.getSeriesid();
-						int series;
 						try {
-							series = Integer.parseInt(seriesId);
+							int series = Integer.parseInt(pvinfo.getSeriesid());
 							add("seriesId" + days_history + "@" + series, dc);
-						}
-						catch(Exception e) {
-							;
-						}
-						
-						String specId = pvinfo.getSeriesid();
-						int spec;
-						try {
-							spec = Integer.parseInt(specId);
+							
+							int spec = Integer.parseInt(pvinfo.getSpecid());
 							add("specId"+ days_history + "@" + spec, dc);
 						}
 						catch(Exception e) {
 							;
-						}
-
+						}						
 					}
 					
 					if(cookie != null  && !cookie.isEmpty() && !dc.isEmpty())
-						context.write(new Text(cookie), new Text(output_map(dc, days)));	
+						context.write(new Text(cookie), new Text(output_map (dc, days)));	
 					
 				}
 				} catch (ParseException e) {
@@ -153,15 +135,16 @@ public class RawTarget extends AbstractProcessor {
 	}
 
 	public static class HReduce extends Reducer<Text, Text, Text, Text> {
-		private static double discret;
+		private static int days_history;
+		private Map<String,String> spec_price_map = new HashMap<String,String>();
+				
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
-			
-			////equal value discretization
-			discret = context.getConfiguration().getDouble("discret",0.01);
+			days_history = context.getConfiguration().getInt("history_days", 7);
+			spec_price_map = CommonDataAndFunc.readMaps("click_cookie", CommonDataAndFunc.TAB, 0, 1, "utf-8");	
 		}
 		
-		private void string2dict(String str, HashMap<String, Double> ans) {
+		private void string2dict(String str, HashMap<String, Double> spec, HashMap<String, Double> series) {
 			if(str == null)
 				return;
 			String key = null;
@@ -173,11 +156,23 @@ public class RawTarget extends AbstractProcessor {
 			{
 				key = tmp[i];
 				val = Double.parseDouble(tmp[i+1]);
-				if(ans.containsKey(key)) {
-					ans.put(key, ans.get(key) + val);
+				if(key.contains("spec"))
+				{
+					if(spec.containsKey(key)) {
+						spec.put(key, spec.get(key) + val);
+					}
+					else {
+						spec.put(key, val);
+					}
 				}
-				else {
-					ans.put(key, val);
+				else if(key.contains("series"))
+				{
+					if(series.containsKey(key)) {
+						series.put(key, series.get(key) + val);
+					}
+					else {
+						series.put(key, val);
+					}
 				}
 			}
 		}
@@ -193,26 +188,96 @@ public class RawTarget extends AbstractProcessor {
 				sb.append(entry.getKey());
 				sb.append(":");
 				double val = entry.getValue();
-				//equal value discretization
-				//int discretval=(int)(val/discret);
-				//sb.append(discretval);
-				sb.append(val);
-				
+
+				sb.append(val);				
 			}
 			return sb.toString();
 		}
 
 
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-			HashMap<String, Double> dc_score = new HashMap<String, Double>();
+			HashMap<String, Double> spec_score = new HashMap<String, Double>();
+			HashMap<String, Double> series_score = new HashMap<String, Double>();
 			for (Text value : values) {
 				if(value.toString().trim().isEmpty())
 					continue;
-				string2dict(value.toString(), dc_score);
+				string2dict(value.toString(), spec_score, series_score);
 			}
-			if(!dc_score.isEmpty())
-				
-			    context.write(key, new Text(output_map(dc_score)));
+			
+			/*
+			 * 用户是否决定购买某款车型 还是在选择多款车型的阶段
+			 *  
+			 * */
+			List<Map.Entry<String, Double>> series_lst = new ArrayList<Map.Entry<String, Double>>(series_score.entrySet());
+			List<Map.Entry<String, Double>> spec_lst = new ArrayList<Map.Entry<String, Double>>(spec_score.entrySet());
+			
+			Collections.sort(series_lst, new Comparator<Map.Entry<String, Double>>() {   
+			    public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2) {      
+			        return (int) (o2.getValue() - o1.getValue());			        
+			    }
+			});
+			
+			Collections.sort(spec_lst, new Comparator<Map.Entry<String, Double>>() {   
+			    public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2) {      
+			        return (int) (o2.getValue() - o1.getValue());			        
+			    }
+			});
+
+			double ratio_top1 = 0.0, ratio_top3 = 0.0, sum = 0.0;			
+			int spec_cnt = 0, series_cnt = 0;
+			
+			for (int i = 0; i < series_lst.size(); i++) {
+			    if(i == 0)
+			    	ratio_top1 += series_lst.get(i).getValue();
+			    if(i<3)
+			    	ratio_top3 += series_lst.get(i).getValue();
+			    sum += series_lst.get(i).getValue();
+			    if(series_lst.get(i).getValue() > 2)
+			    	series_cnt++;			    
+			}			
+			ratio_top1 = ratio_top1 / sum;
+			ratio_top3 = ratio_top3 / sum;
+			series_score.put("seriesRatio1"+ days_history , ratio_top1);
+			series_score.put("seriesRatio3"+ days_history , ratio_top3);
+			series_score.put("seriesCnt"+ days_history , (double) series_cnt);
+			
+			ratio_top1 = 0.0; ratio_top3 = 0.0; sum = 0.0;
+			double price_mean = 0.0, price_var = 0.0;
+			int cnt_var = 0, sum_var = 0;
+			
+			for (int i = 0; i < spec_lst.size(); i++) {
+			    if(i == 0)
+			    	ratio_top1 += spec_lst.get(i).getValue();
+			    if(i<3)
+			    {
+			    	ratio_top3 += spec_lst.get(i).getValue();
+			    	price_mean += Double.valueOf(spec_price_map.get(spec_lst.get(i).getKey()));
+			    	cnt_var ++;
+			    }
+			    sum += spec_lst.get(i).getValue();
+			    if(spec_lst.get(i).getValue() > 2)
+			    	spec_cnt++;		
+			}
+			price_mean /= cnt_var;
+			for (int i = 0; i < spec_lst.size(); i++) {
+				if(i>=3)
+					break;
+				sum_var += Math.pow(Double.valueOf(spec_price_map.get(spec_lst.get(i).getKey())) - price_mean, 2);				
+			}
+			
+			price_var = Math.sqrt(sum_var/cnt_var);
+			ratio_top1 = ratio_top1 / sum;
+			ratio_top3 = ratio_top3 / sum;
+			spec_score.put("specRatio1"+ days_history , ratio_top1);
+			spec_score.put("specRatio3"+ days_history , ratio_top3);
+			series_score.put("specCnt"+ days_history , (double) spec_cnt);
+			series_score.put("specVar"+ days_history , price_var);
+			series_score.put("specMean"+ days_history , price_mean);
+			
+			spec_score.putAll(series_score);
+			
+			if(!spec_score.isEmpty())			
+			    context.write(key, new Text(output_map(spec_score)));
 		}
 	}
 
@@ -221,7 +286,6 @@ public class RawTarget extends AbstractProcessor {
 		job.getConfiguration().set("mapred.job.priority", "VERY_HIGH");
 		job.setMapperClass(RCFileMapper.class);
 		job.setReducerClass(HReduce.class);
-		//job.setCombinerClass(HReduce.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);

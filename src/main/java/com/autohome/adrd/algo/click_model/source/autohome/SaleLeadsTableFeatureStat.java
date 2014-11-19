@@ -12,6 +12,11 @@ import org.apache.hadoop.mapreduce.Reducer.Context;
 
 import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
 
+/**
+ * Generate feature CLK PV
+ * in order to Draw Reach-CTR
+ * @author : Chen Shuaihua
+ */
 
 public class SaleLeadsTableFeatureStat extends AbstractProcessor{
 	
