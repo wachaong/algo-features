@@ -9,7 +9,10 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 
 import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
-
+/**
+ * feature line count 
+ * @author : Chen Shuaihua
+ */
 
 public class TableLineCount extends AbstractProcessor{
 	
