@@ -10,10 +10,15 @@ import org.apache.hadoop.mapreduce.Mapper;
 
 import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
 
+/**
+ * convert feature string to id 
+ * in order to generate train sample
+ * @author : Chen Shuaihua
+ */
 
 public class IdFeature extends AbstractProcessor{
 	
-	public static class PredictMapper extends Mapper<LongWritable, Text, Text, Text>{
+	public static class IdFeatureMapper extends Mapper<LongWritable, Text, Text, Text>{
 
 		 private static String id_name;
 		 static  Map<String, String>  featureid;
@@ -44,27 +49,19 @@ public class IdFeature extends AbstractProcessor{
 						if(featureid.containsKey(featurescore[0])){
 							sb.append(featureid.get(featurescore[0])+":"+featurescore[1]+"\t");
 						}
-						
-						
-					
-							
 					}
-						
-						    
-				}
-				
-					
-				}
-				context.write(new Text(lines[0]),new Text(sb.toString()));
-		  }
-				
+	
+				}	
 			}
+			context.write(new Text(lines[0]),new Text(sb.toString()));
+		}
+	}
 		
 		
 	
 	protected void configJob(Job job) {
 
-		job.setMapperClass(PredictMapper.class);
+		job.setMapperClass(IdFeatureMapper.class);
 	
 		job.setMapOutputValueClass(Text.class);
 		job.setMapOutputKeyClass(Text.class);

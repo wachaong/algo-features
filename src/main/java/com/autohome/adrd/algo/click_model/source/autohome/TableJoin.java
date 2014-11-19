@@ -12,7 +12,10 @@ import org.apache.hadoop.mapreduce.Reducer;
 
 import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
 
-
+/**
+ * Join  label and Feature
+ * @author : Chen Shuaihua
+ */
 public class TableJoin extends AbstractProcessor{
 	
 	public static class JoinMapper extends Mapper<LongWritable, Text, Text, Text>{
@@ -52,7 +55,7 @@ public class TableJoin extends AbstractProcessor{
 		
 	}
 	
-	public static class HReduce extends Reducer<Text, Text, Text, Text> {
+	public static class JoinReduce extends Reducer<Text, Text, Text, Text> {
 		
 		public void reduce(Text key, Iterable<Text> values, Context context)
 				throws IOException, InterruptedException {
@@ -96,7 +99,7 @@ public class TableJoin extends AbstractProcessor{
 	protected void configJob(Job job) {
 
 		job.setMapperClass(JoinMapper.class);
-		job.setReducerClass(HReduce.class);
+		job.setReducerClass(JoinReduce.class);
 	    job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
 		job.setMapOutputKeyClass(Text.class);

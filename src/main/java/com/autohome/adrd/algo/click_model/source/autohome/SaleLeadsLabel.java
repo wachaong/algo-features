@@ -18,10 +18,15 @@ import com.autohome.adrd.algo.protobuf.PvlogOperation;
 import com.autohome.adrd.algo.protobuf.SaleleadsInfoOperation;
 import com.autohome.adrd.algo.protobuf.TargetingKVOperation;
 import com.autohome.adrd.algo.sessionlog.consume.RCFileBaseMapper;
+/**
+ * Generage label 
+ * Format: cookie	label:1(or 0)
+ * @author : Chen Shuaihua
+ */
 
 public class SaleLeadsLabel extends AbstractProcessor {
 
-	public static class RCFileMapper extends RCFileBaseMapper<Text, Text> {
+	public static class LabelMapper extends RCFileBaseMapper<Text, Text> {
 
 		public static final String CG_USER = "user";
 		public static final String CG_PV = "pv";
@@ -66,7 +71,7 @@ public class SaleLeadsLabel extends AbstractProcessor {
 	@Override
 	protected void configJob(Job job) {
 		job.getConfiguration().set("mapred.job.priority", "VERY_HIGH");
-		job.setMapperClass(RCFileMapper.class);
+		job.setMapperClass(LabelMapper.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);
