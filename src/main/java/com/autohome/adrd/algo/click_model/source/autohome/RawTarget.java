@@ -26,64 +26,63 @@ import com.autohome.adrd.algo.protobuf.PvlogOperation;
  * 
  * @author [Wangchao: wangchao@autohome.com.cn ]
  * 
+ * version1
  * 输出用户过去一段时间内常浏览的车型，车系, 车型价格
  * 以及计算用户喜欢车型 车系 车型价格的集中程度:类似异众比率的计算方式
  * 异众比率:specRatio1,3 seriesRatio1,3
  * 感兴趣的车型车系个数:seriesCnt specCnt
  * 感兴趣的车型价格均值和方差:specVar specMean
  * 
+ * version2
+ * 生成用户特征集合，主要覆盖的是时序相关的基于pv日志的behavior targeting特征
+ * 支持pred日期之前的多个时间段的特征的同时输出，支持同时输出训练集和测试集特征,或者只是生成训练集特征
+ * 
  */
 
 public class RawTarget extends AbstractProcessor {
-	
-	
-	
+		
 	public static class RCFileMapper extends RCFileBaseMapper<Text, Text> {
 
 		public static final String CG_USER = "user";
-		public static final String CG_PV = "pv";
-		public static final String CG_SEARCH = "search";
-		public static final String CG_SALE_LEADS = "saleleads";
-		public static final String CG_TAGS = "tags";
+		public static final String CG_PV = "pv";		
 		public static final String CG_APPPV = "apppv";
-		public static final String CG_BEHAVIOR = "behavior";
 		
-		private static String pred_date;
-		private static double decay;
-		private static int days_history;
+		private static String pred_train_start;
+		private static String pred_test_start;
+		private static String days_history;
 				
 
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
-			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,behavior,tags,addisplay,adclick,pv");
-			pred_date = context.getConfiguration().get("pred_date");
-			decay = context.getConfiguration().getDouble("decay",0.6);
-			days_history = context.getConfiguration().getInt("history_days", 7);					
+			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,apppv,pv");
+			pred_train_start = context.getConfiguration().get("pred_train_start");
+			//if pred_test_start set to no, then don't generate test set
+			pred_test_start = context.getConfiguration().get("pred_test_start");	
+			days_history = context.getConfiguration().get("history_days", "7:0.8,15:0.9,30:0.95,60:0.975");					
 		}
 		
-		private void add(String fea, HashMap<String, Integer> map) {
+		private void add(String fea, HashMap<String, Double> map, double score) {
 			if(map.containsKey(fea)) {
-				map.put(fea, map.get(fea) + 1);
+				map.put(fea, map.get(fea) + score);
 			}
 			else
-				map.put(fea, 1);	
+				map.put(fea, score);	
 		}
 		
 
-		private String output_map(HashMap<String, Integer> map, long days) {
+		private String output_map(HashMap<String, Double> map) {
 			StringBuilder sb = new StringBuilder();
 			int i = 0;
-			for(Map.Entry<String, Integer> entry : map.entrySet()) {
+			for(Map.Entry<String, Double> entry : map.entrySet()) {
 				if(i > 0)
 					sb.append("\t");
 				i++;
 				sb.append(entry.getKey());
 			    sb.append("\t");
-				int val = entry.getValue();
+				double val = entry.getValue();
 				if(val > 50)
 					val = 50;
-				sb.append(val * Math.pow(decay,days));
-									
+				sb.append(val);									
 			}
 			return sb.toString();
 		}
@@ -102,29 +101,49 @@ public class RawTarget extends AbstractProcessor {
 			Date d;
 			
 			try {
+				
 				d = new SimpleDateFormat("yyyyMMdd").parse(date);
-				Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_date.replaceAll("/", ""));
+				Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_train_start.replaceAll("/", ""));
 				long diff = d2.getTime() - d.getTime();
-				long days = diff/(1000*60*60*24);
+				long days_train = diff/(1000*60*60*24);  //训练半衰期区间
+				long days_test = 999;
+				
+				if(! pred_test_start.equals("no"))
+				{
+					d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_test_start.replaceAll("/", ""));
+					diff = d2.getTime() - d.getTime();
+					days_test = diff/(1000*60*60*24);  //训练半衰期区间
+				}
 				
 				if(pvList != null && pvList.size() > 0)
 				{
-					HashMap<String, Integer> dc = new HashMap<String, Integer>();
+					HashMap<String, Double> dc = new HashMap<String, Double>();
 					for(PvlogOperation.AutoPVInfo pvinfo : pvList) {
-						try {
-							int series = Integer.parseInt(pvinfo.getSeriesid());
-							add("seriesId" + days_history + "@" + series, dc);
-							
-							int spec = Integer.parseInt(pvinfo.getSpecid());
-							add("specId"+ days_history + "@" + spec, dc);
-						}
-						catch(Exception e) {
-							;
-						}						
+						
+						int series = Integer.valueOf(pvinfo.getSeriesid());														
+						int spec = Integer.valueOf(pvinfo.getSpecid());
+						
+						for(String part : days_history.split(","))
+						{
+							int day = Integer.valueOf(part.split(":",2)[0]);
+							double decay = Double.valueOf(part.split(":",2)[1]);
+							if( (days_train > 0) && (days_train <= day) )
+							{
+								double score = Math.pow(decay,days_train);
+								add("tr_series_" + String.valueOf(day) + "@" + series, dc, score);
+								add("tr_spec_"+ String.valueOf(day) + "@" + spec, dc, score);
+							}
+							if( days_test <= day )
+							{
+								double score = Math.pow(decay,days_test);
+								add("te_series_" + String.valueOf(day) + "@" + series, dc, score);
+								add("te_spec_"+ String.valueOf(day) + "@" + spec, dc, score);
+							}																											
+						}																							
 					}
 					
 					if(cookie != null  && !cookie.isEmpty() && !dc.isEmpty())
-						context.write(new Text(cookie), new Text(output_map (dc, days)));	
+						context.write(new Text(cookie), new Text(output_map (dc)));	
 					
 				}
 				} catch (ParseException e) {
