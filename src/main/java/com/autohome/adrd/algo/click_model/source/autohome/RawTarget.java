@@ -1,5 +1,6 @@
 package com.autohome.adrd.algo.click_model.source.autohome;
 
+import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -10,6 +11,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
 import org.apache.hadoop.hive.serde2.columnar.BytesRefArrayWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -141,7 +143,14 @@ public class RawTarget extends AbstractProcessor {
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
 			days_history = context.getConfiguration().getInt("history_days", 7);
-			spec_price_map = CommonDataAndFunc.readMaps("click_cookie", CommonDataAndFunc.TAB, 0, 1, "utf-8");	
+			//spec_price_map = CommonDataAndFunc.readMaps("click_cookie", CommonDataAndFunc.TAB, 0, 1, "utf-8");
+			String spec_price_map_file = context.getConfiguration().get("spec_price");
+			Scanner in = new Scanner(new File(spec_price_map_file));
+			while(in.hasNext()) {
+				spec_price_map.put(in.next(), in.next());
+			}
+			
+			//spec_price_map = CommonDataAndFunc.readMaps(spec_price_map_file, CommonDataAndFunc.TAB, 0, 1, "utf-8");
 		}
 		
 		private void string2dict(String str, HashMap<String, Double> spec, HashMap<String, Double> series) {
@@ -204,12 +213,23 @@ public class RawTarget extends AbstractProcessor {
 				string2dict(value.toString(), spec_score, series_score);
 			}
 			
+			HashMap<String, Double> spec_score_tmp = new HashMap<String, Double>();
+			HashMap<String, Double> series_score_tmp = new HashMap<String, Double>();
+			for(Map.Entry<String, Double> entry : spec_score.entrySet()) {
+				String ID = entry.getKey().trim().split("@")[1];
+				spec_score_tmp.put(ID, entry.getValue());
+			}
+			for(Map.Entry<String, Double> entry : series_score.entrySet()) {
+				String ID = entry.getKey().trim().split("@")[1];
+				series_score_tmp.put(ID, entry.getValue());
+			}
+			
 			/*
 			 * 用户是否决定购买某款车型 还是在选择多款车型的阶段
 			 *  
 			 * */
-			List<Map.Entry<String, Double>> series_lst = new ArrayList<Map.Entry<String, Double>>(series_score.entrySet());
-			List<Map.Entry<String, Double>> spec_lst = new ArrayList<Map.Entry<String, Double>>(spec_score.entrySet());
+			List<Map.Entry<String, Double>> series_lst = new ArrayList<Map.Entry<String, Double>>(series_score_tmp.entrySet());
+			List<Map.Entry<String, Double>> spec_lst = new ArrayList<Map.Entry<String, Double>>(spec_score_tmp.entrySet());
 			
 			Collections.sort(series_lst, new Comparator<Map.Entry<String, Double>>() {   
 			    public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2) {      
@@ -234,9 +254,12 @@ public class RawTarget extends AbstractProcessor {
 			    sum += series_lst.get(i).getValue();
 			    if(series_lst.get(i).getValue() > 2)
 			    	series_cnt++;			    
-			}			
-			ratio_top1 = ratio_top1 / sum;
-			ratio_top3 = ratio_top3 / sum;
+			}
+			if(sum > 0) {
+				ratio_top1 = ratio_top1 / sum;
+				ratio_top3 = ratio_top3 / sum;				
+			}
+
 			series_score.put("seriesRatio1"+ days_history , ratio_top1);
 			series_score.put("seriesRatio3"+ days_history , ratio_top3);
 			series_score.put("seriesCnt"+ days_history , (double) series_cnt);
@@ -251,23 +274,35 @@ public class RawTarget extends AbstractProcessor {
 			    if(i<3)
 			    {
 			    	ratio_top3 += spec_lst.get(i).getValue();
-			    	price_mean += Double.valueOf(spec_price_map.get(spec_lst.get(i).getKey()));
-			    	cnt_var ++;
+			    	if(spec_price_map.containsKey(spec_lst.get(i).getKey())) {
+			    		price_mean += Double.valueOf(spec_price_map.get(spec_lst.get(i).getKey()));
+			    		cnt_var ++;
+			    	}
+			    	
+			    	
 			    }
 			    sum += spec_lst.get(i).getValue();
 			    if(spec_lst.get(i).getValue() > 2)
 			    	spec_cnt++;		
 			}
-			price_mean /= cnt_var;
+			if(cnt_var > 0)
+				price_mean /= cnt_var;
 			for (int i = 0; i < spec_lst.size(); i++) {
 				if(i>=3)
 					break;
-				sum_var += Math.pow(Double.valueOf(spec_price_map.get(spec_lst.get(i).getKey())) - price_mean, 2);				
+				if(spec_price_map.containsKey(spec_lst.get(i).getKey()))
+					sum_var += Math.pow(Double.valueOf(spec_price_map.get(spec_lst.get(i).getKey())) - price_mean, 2);				
+			}
+			if(cnt_var > 0)
+			{
+				price_var = Math.sqrt(sum_var/cnt_var);
 			}
 			
-			price_var = Math.sqrt(sum_var/cnt_var);
-			ratio_top1 = ratio_top1 / sum;
-			ratio_top3 = ratio_top3 / sum;
+			if(sum > 0)
+			{
+				ratio_top1 = ratio_top1 / sum;
+				ratio_top3 = ratio_top3 / sum;
+			}
 			spec_score.put("specRatio1"+ days_history , ratio_top1);
 			spec_score.put("specRatio3"+ days_history , ratio_top3);
 			series_score.put("specCnt"+ days_history , (double) spec_cnt);

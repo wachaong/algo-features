@@ -74,7 +74,7 @@ public class SaleLeadsLabel extends AbstractProcessor {
 			int label = 0;
 			for (Text value : values) {
 				String [] segs = value.toString().split(":");
-				if(segs[1] == "1")
+				if(Integer.valueOf(segs[1]) == 1)
 				{
 					label = 1;
 					break;
