@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.hive.serde2.columnar.BytesRefArrayWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -38,6 +39,7 @@ import com.autohome.adrd.algo.protobuf.PvlogOperation;
  * version2
  * 生成用户特征集合，主要覆盖的是时序相关的基于pv日志的behavior targeting特征
  * 支持pred日期之前的多个时间段的特征的同时输出，支持同时输出训练集和测试集特征,或者只是生成训练集特征
+ * 包括:频道兴趣，车型，车系，价格，用户属性等
  * 
  */
 
@@ -92,6 +94,7 @@ public class RawTarget extends AbstractProcessor {
 		@SuppressWarnings("unchecked")
 		public void map(LongWritable key, BytesRefArrayWritable value, Context context) throws IOException, InterruptedException {
 			
+			
 			List<PvlogOperation.AutoPVInfo> pvList = new ArrayList<PvlogOperation.AutoPVInfo>();
 			decode(key, value);
 
@@ -101,6 +104,7 @@ public class RawTarget extends AbstractProcessor {
 			String path=((FileSplit)context.getInputSplit()).getPath().toString();
 			String date = path.split("sessionlog")[1].split("part")[0].replaceAll("/", "");
 			Date d;
+			Pattern pattern = Pattern.compile("^[-\\+]?[\\d]*$");
 			
 			try {
 				
@@ -125,6 +129,11 @@ public class RawTarget extends AbstractProcessor {
 						int series = Integer.valueOf(pvinfo.getSeriesid());														
 						int spec = Integer.valueOf(pvinfo.getSpecid());
 						
+						String province = pvinfo.getProvinceid().trim();
+						String city = pvinfo.getCityid().trim();
+						add("province" + "@" + province, dc, 1.0);
+						add("city" + "@" + city, dc, 1.0);
+						
 						for(String part : days_history.split(","))
 						{
 							int day = Integer.valueOf(part.split(":",2)[0]);
@@ -133,13 +142,19 @@ public class RawTarget extends AbstractProcessor {
 							{
 								double score = Math.pow(decay,days_train);
 								add("tr_series_" + String.valueOf(day) + "@" + series, dc, score);
-								add("tr_spec_"+ String.valueOf(day) + "@" + spec, dc, score);
+								add("tr_spec_"+ String.valueOf(day) + "@" + spec, dc, score);																								
+								
+								if(pattern.matcher(pvinfo.getSite1Id()).matches() && pattern.matcher(pvinfo.getSite2Id()).matches() )
+									add("tr_channel_" + String.valueOf(day) + "@" + pvinfo.getSite1Id()+"#"+pvinfo.getSite2Id(), dc, score);
 							}
 							if( days_test <= day )
 							{
 								double score = Math.pow(decay,days_test);
 								add("te_series_" + String.valueOf(day) + "@" + series, dc, score);
 								add("te_spec_"+ String.valueOf(day) + "@" + spec, dc, score);
+								
+								if(pattern.matcher(pvinfo.getSite1Id()).matches() && pattern.matcher(pvinfo.getSite2Id()).matches() )
+									add("te_channel_" + String.valueOf(day) + "@" + pvinfo.getSite1Id()+"#"+pvinfo.getSite2Id(), dc, score);
 							}																											
 						}																							
 					}

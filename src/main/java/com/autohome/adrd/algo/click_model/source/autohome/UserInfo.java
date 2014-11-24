@@ -24,8 +24,6 @@ import org.apache.hadoop.mapreduce.Reducer;
 
 import com.autohome.adrd.algo.sessionlog.consume.RCFileBaseMapper;
 import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
-import com.autohome.adrd.algo.click_model.source.autohome.ChannelInterest.HReduce;
-import com.autohome.adrd.algo.click_model.source.autohome.ChannelInterest.RCFileMapper;
 import com.autohome.adrd.algo.protobuf.AdLogOperation;
 import com.autohome.adrd.algo.protobuf.ApplogOperation;
 import com.autohome.adrd.algo.protobuf.PvlogOperation;
