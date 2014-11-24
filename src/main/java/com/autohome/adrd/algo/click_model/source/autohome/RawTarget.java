@@ -9,8 +9,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
@@ -170,24 +172,22 @@ public class RawTarget extends AbstractProcessor {
 	}
 	}
 
+	/*
+	 * 为map阶段的所有特征增加如下特征：
+	 */
 	public static class HReduce extends Reducer<Text, Text, Text, Text> {
-		private static int days_history;
-		private Map<String,String> spec_price_map = new HashMap<String,String>();
+		private Map<String,Double> spec_price_map = new HashMap<String,Double>();
 				
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
-			days_history = context.getConfiguration().getInt("history_days", 7);
-			//spec_price_map = CommonDataAndFunc.readMaps("click_cookie", CommonDataAndFunc.TAB, 0, 1, "utf-8");
 			String spec_price_map_file = context.getConfiguration().get("spec_price");
 			Scanner in = new Scanner(new File(spec_price_map_file));
 			while(in.hasNext()) {
-				spec_price_map.put(in.next(), in.next());
+				spec_price_map.put(in.next(), Double.valueOf(in.next()));
 			}
-			
-			//spec_price_map = CommonDataAndFunc.readMaps(spec_price_map_file, CommonDataAndFunc.TAB, 0, 1, "utf-8");
 		}
 		
-		private void string2dict(String str, HashMap<String, Double> spec, HashMap<String, Double> series) {
+		private void string2dict(String str, HashMap<String, Double> dic, HashSet<String> types) {
 			if(str == null)
 				return;
 			String key = null;
@@ -197,27 +197,97 @@ public class RawTarget extends AbstractProcessor {
 				return;
 			for(int i = 0; i < tmp.length / 2; i += 2)
 			{
-				key = tmp[i];
+				key = tmp[i];			
 				val = Double.parseDouble(tmp[i+1]);
-				if(key.contains("spec"))
+				if(key.indexOf("@") != -1)
 				{
-					if(spec.containsKey(key)) {
-						spec.put(key, spec.get(key) + val);
-					}
-					else {
-						spec.put(key, val);
-					}
+					types.add(key.split("@")[0]);
 				}
-				else if(key.contains("series"))
-				{
-					if(series.containsKey(key)) {
-						series.put(key, series.get(key) + val);
-					}
-					else {
-						series.put(key, val);
-					}
+				if(dic.containsKey(key)) {
+					dic.put(key, dic.get(key) + val);
+				}
+				else {
+					dic.put(key, val);
 				}
 			}
+		}
+		
+		private List<Entry<String, Double>> filter_from_dict(String filter, HashMap<String, Double> dic) {
+			HashMap<String, Double> subset = new HashMap<String, Double>();
+			for(Map.Entry<String, Double> entry : dic.entrySet()) {
+				if(entry.getKey().trim().indexOf(filter) != -1)
+				{
+					subset.put(entry.getKey(), entry.getValue());
+				}
+			 }
+			
+			List<Map.Entry<String, Double>> dic_lst = new ArrayList<Map.Entry<String, Double>>(subset.entrySet());
+			Collections.sort(dic_lst, new Comparator<Map.Entry<String, Double>>() {   
+			    public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2) {      
+			        return (int) (o2.getValue() - o1.getValue());			        
+			    }
+			});
+			
+			return dic_lst;			
+		}
+		
+		private HashMap<String, Double> ratio_features(String prefix, List<Map.Entry<String, Double>> sort_lst, 
+				Map<String,Double> spec_price_map) {
+			HashMap<String, Double> new_feas = new HashMap<String, Double>();
+			
+			double ratio_top1 = 0.0, ratio_top3 = 0.0, sum = 0.0, price_mean = 0.0, price_var = 0.0;
+			int cnt = 0, cnt_var = 0, sum_var = 0;
+			boolean do_price = false;
+			if( sort_lst.get(0).getKey().indexOf("spec") != -1 )
+				do_price = true;
+			
+			for (int i = 0; i < sort_lst.size(); i++) {
+			    if(i == 0)
+			    	ratio_top1 += sort_lst.get(i).getValue();
+			    if(i<3)
+			    {
+			    	ratio_top3 += sort_lst.get(i).getValue();
+			    	if(do_price)
+			    	{
+				    	if(spec_price_map.containsKey(sort_lst.get(i).getKey().split("@")[1])) {
+				    		price_mean += Double.valueOf(spec_price_map.get(sort_lst.get(i).getKey().split("@")[1]));
+				    		cnt_var ++;
+				    	}
+			    	}
+			    		
+			    }
+			    sum += sort_lst.get(i).getValue();
+			    if(sort_lst.get(i).getValue() > 2)
+			    	cnt++;			    
+			}
+			if(sum > 0) {
+				ratio_top1 = ratio_top1 / sum;
+				ratio_top3 = ratio_top3 / sum;				
+			}
+
+			new_feas.put(prefix + "_Ratio1" , ratio_top1);
+			new_feas.put(prefix + "_Ratio3" , ratio_top3);
+			new_feas.put(prefix + "_Cnt" , (double) cnt);
+			
+			if(do_price)
+			{
+				if(cnt_var > 0)
+					price_mean /= cnt_var;
+				for (int i = 0; i < sort_lst.size(); i++) {
+					if(i>=3)
+						break;
+					if(spec_price_map.containsKey(sort_lst.get(i).getKey().split("@")[1]))
+						sum_var += Math.pow(Double.valueOf(spec_price_map.get(sort_lst.get(i).getKey().split("@")[1])) - price_mean, 2);				
+				}
+				if(cnt_var > 0)
+				{
+					price_var = Math.sqrt(sum_var/cnt_var);
+					new_feas.put(prefix + "_Mean" , price_mean);
+					new_feas.put(prefix + "_Var" , price_var);
+				}
+			}
+										
+			return new_feas;
 		}
 		
 		
@@ -239,114 +309,34 @@ public class RawTarget extends AbstractProcessor {
 
 
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-			HashMap<String, Double> spec_score = new HashMap<String, Double>();
-			HashMap<String, Double> series_score = new HashMap<String, Double>();
+			HashMap<String, Double> dic = new HashMap<String, Double>();
+			HashMap<String, Double> dic_tmp, dic_add;
+			List<Map.Entry<String, Double>> sort_lst;
+			HashSet<String> types = new HashSet<String>();
+			
 			for (Text value : values) {
 				if(value.toString().trim().isEmpty())
 					continue;
-				string2dict(value.toString(), spec_score, series_score);
-			}
-			
-			HashMap<String, Double> spec_score_tmp = new HashMap<String, Double>();
-			HashMap<String, Double> series_score_tmp = new HashMap<String, Double>();
-			for(Map.Entry<String, Double> entry : spec_score.entrySet()) {
-				String ID = entry.getKey().trim().split("@")[1];
-				spec_score_tmp.put(ID, entry.getValue());
-			}
-			for(Map.Entry<String, Double> entry : series_score.entrySet()) {
-				String ID = entry.getKey().trim().split("@")[1];
-				series_score_tmp.put(ID, entry.getValue());
+				string2dict(value.toString(), dic, types);
 			}
 			
 			/*
 			 * 用户是否决定购买某款车型 还是在选择多款车型的阶段
 			 *  
 			 * */
-			List<Map.Entry<String, Double>> series_lst = new ArrayList<Map.Entry<String, Double>>(series_score_tmp.entrySet());
-			List<Map.Entry<String, Double>> spec_lst = new ArrayList<Map.Entry<String, Double>>(spec_score_tmp.entrySet());
-			
-			Collections.sort(series_lst, new Comparator<Map.Entry<String, Double>>() {   
-			    public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2) {      
-			        return (int) (o2.getValue() - o1.getValue());			        
-			    }
-			});
-			
-			Collections.sort(spec_lst, new Comparator<Map.Entry<String, Double>>() {   
-			    public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2) {      
-			        return (int) (o2.getValue() - o1.getValue());			        
-			    }
-			});
-
-			double ratio_top1 = 0.0, ratio_top3 = 0.0, sum = 0.0;			
-			int spec_cnt = 0, series_cnt = 0;
-			
-			for (int i = 0; i < series_lst.size(); i++) {
-			    if(i == 0)
-			    	ratio_top1 += series_lst.get(i).getValue();
-			    if(i<3)
-			    	ratio_top3 += series_lst.get(i).getValue();
-			    sum += series_lst.get(i).getValue();
-			    if(series_lst.get(i).getValue() > 2)
-			    	series_cnt++;			    
-			}
-			if(sum > 0) {
-				ratio_top1 = ratio_top1 / sum;
-				ratio_top3 = ratio_top3 / sum;				
-			}
-
-			series_score.put("seriesRatio1"+ days_history , ratio_top1);
-			series_score.put("seriesRatio3"+ days_history , ratio_top3);
-			series_score.put("seriesCnt"+ days_history , (double) series_cnt);
-			
-			ratio_top1 = 0.0; ratio_top3 = 0.0; sum = 0.0;
-			double price_mean = 0.0, price_var = 0.0;
-			int cnt_var = 0, sum_var = 0;
-			
-			for (int i = 0; i < spec_lst.size(); i++) {
-			    if(i == 0)
-			    	ratio_top1 += spec_lst.get(i).getValue();
-			    if(i<3)
-			    {
-			    	ratio_top3 += spec_lst.get(i).getValue();
-			    	if(spec_price_map.containsKey(spec_lst.get(i).getKey())) {
-			    		price_mean += Double.valueOf(spec_price_map.get(spec_lst.get(i).getKey()));
-			    		cnt_var ++;
-			    	}
-			    	
-			    	
-			    }
-			    sum += spec_lst.get(i).getValue();
-			    if(spec_lst.get(i).getValue() > 2)
-			    	spec_cnt++;		
-			}
-			if(cnt_var > 0)
-				price_mean /= cnt_var;
-			for (int i = 0; i < spec_lst.size(); i++) {
-				if(i>=3)
-					break;
-				if(spec_price_map.containsKey(spec_lst.get(i).getKey()))
-					sum_var += Math.pow(Double.valueOf(spec_price_map.get(spec_lst.get(i).getKey())) - price_mean, 2);				
-			}
-			if(cnt_var > 0)
+			dic_tmp = new HashMap<String, Double>();
+			for(String type : types)
 			{
-				price_var = Math.sqrt(sum_var/cnt_var);
+				sort_lst = filter_from_dict(type, dic);
+				dic_add = ratio_features(type, sort_lst, spec_price_map);
+				dic_tmp.putAll(dic_add);
+				dic_add.clear();
 			}
+						
+			dic.putAll(dic_tmp);
 			
-			if(sum > 0)
-			{
-				ratio_top1 = ratio_top1 / sum;
-				ratio_top3 = ratio_top3 / sum;
-			}
-			spec_score.put("specRatio1"+ days_history , ratio_top1);
-			spec_score.put("specRatio3"+ days_history , ratio_top3);
-			series_score.put("specCnt"+ days_history , (double) spec_cnt);
-			series_score.put("specVar"+ days_history , price_var);
-			series_score.put("specMean"+ days_history , price_mean);
-			
-			spec_score.putAll(series_score);
-			
-			if(!spec_score.isEmpty())			
-			    context.write(key, new Text(output_map(spec_score)));
+			if(!dic.isEmpty())			
+			    context.write(key, new Text(output_map(dic)));
 		}
 	}
 
