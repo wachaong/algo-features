@@ -26,6 +26,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import com.autohome.adrd.algo.sessionlog.consume.RCFileBaseMapper;
 import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
 import com.autohome.adrd.algo.protobuf.PvlogOperation;
+import com.autohome.adrd.algo.protobuf.SaleleadsInfoOperation;
 
 /**
  * 
@@ -52,6 +53,7 @@ public class RawTarget extends AbstractProcessor {
 		public static final String CG_USER = "user";
 		public static final String CG_PV = "pv";		
 		public static final String CG_APPPV = "apppv";
+		public static final String CG_SALE_LEADS = "saleleads";
 		
 		private static String pred_train_start;
 		private static String pred_test_start;
@@ -98,9 +100,13 @@ public class RawTarget extends AbstractProcessor {
 			
 			
 			List<PvlogOperation.AutoPVInfo> pvList = new ArrayList<PvlogOperation.AutoPVInfo>();
+			List<SaleleadsInfoOperation.SaleleadsInfo> saleleadsList = new ArrayList<SaleleadsInfoOperation.SaleleadsInfo>();
+			
 			decode(key, value);
 
 			pvList = (List<PvlogOperation.AutoPVInfo>) list.get(CG_PV);
+			saleleadsList = (List<SaleleadsInfoOperation.SaleleadsInfo>) list.get(CG_SALE_LEADS);
+			
 			String cookie = (String) list.get("user");
 			
 			String path=((FileSplit)context.getInputSplit()).getPath().toString();
@@ -159,6 +165,25 @@ public class RawTarget extends AbstractProcessor {
 									add("te_channel_" + String.valueOf(day) + "@" + pvinfo.getSite1Id()+"#"+pvinfo.getSite2Id(), dc, score);
 							}																											
 						}																							
+					}
+					
+					if (saleleadsList != null && saleleadsList.size() != 0)
+					{
+						for(String part : days_history.split(","))
+						{
+							int day = Integer.valueOf(part.split(":",2)[0]);
+							double decay = Double.valueOf(part.split(":",2)[1]);
+							if( (days_train > 0) && (days_train <= day) )
+							{
+								double score = Math.pow(decay,days_train);
+								add("tr_hissaleleads_" + String.valueOf(day), dc, score);								
+							}
+							if( days_test <= day )
+							{
+								double score = Math.pow(decay,days_test);
+								add("te_hissaleleads_" + String.valueOf(day), dc, score);								
+							}																											
+						}						
 					}
 					
 					if(cookie != null  && !cookie.isEmpty() && !dc.isEmpty())
