@@ -21,38 +21,22 @@ public class TableJoin extends AbstractProcessor{
 	public static class JoinMapper extends Mapper<LongWritable, Text, Text, Text>{
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException{
 
-			String[] lines = value.toString().split("\t");
-			
-
+			String[] lines = value.toString().split("\t");			
 			StringBuilder sb = new StringBuilder();
 			int startnum=1;
 			
-		
 			for (int i=startnum;i<lines.length;i++){
-
 				if(!lines[i].equals("0")&&!lines[i].equals("")){
 					String[] feature=lines[i].split(",");
 					for(int j=0;j<feature.length ;j++){
 						if(!feature[j].equals(""))
 							sb.append(feature[j]+"\t");
-					}
-					
-						
+					}											
 				}
 			}
 		
-			
-			
-			
-
-				context.write(new Text(lines[0]),new Text(sb.toString()));
-
-	
-			
-
+			context.write(new Text(lines[0]),new Text(sb.toString()));	
 		}
-		
-		
 	}
 	
 	public static class JoinReduce extends Reducer<Text, Text, Text, Text> {
