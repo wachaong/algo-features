@@ -33,16 +33,16 @@ import com.autohome.adrd.algo.protobuf.SaleleadsInfoOperation;
  * @author [Wangchao: wangchao@autohome.com.cn ]
  * 
  * version1
- * Êä³öÓÃ»§¹ıÈ¥Ò»¶ÎÊ±¼äÄÚ³£ä¯ÀÀµÄ³µĞÍ£¬³µÏµ, ³µĞÍ¼Û¸ñ
- * ÒÔ¼°¼ÆËãÓÃ»§Ï²»¶³µĞÍ ³µÏµ ³µĞÍ¼Û¸ñµÄ¼¯ÖĞ³Ì¶È:ÀàËÆÒìÖÚ±ÈÂÊµÄ¼ÆËã·½Ê½
- * ÒìÖÚ±ÈÂÊ:specRatio1,3 seriesRatio1,3
- * ¸ĞĞËÈ¤µÄ³µĞÍ³µÏµ¸öÊı:seriesCnt specCnt
- * ¸ĞĞËÈ¤µÄ³µĞÍ¼Û¸ñ¾ùÖµºÍ·½²î:specVar specMean
+ * è¾“å‡ºç”¨æˆ·è¿‡å»ä¸€æ®µæ—¶é—´å†…å¸¸æµè§ˆçš„è½¦å‹ï¼Œè½¦ç³», è½¦å‹ä»·æ ¼
+ * ä»¥åŠè®¡ç®—ç”¨æˆ·å–œæ¬¢è½¦å‹ è½¦ç³» è½¦å‹ä»·æ ¼çš„é›†ä¸­ç¨‹åº¦:ç±»ä¼¼å¼‚ä¼—æ¯”ç‡çš„è®¡ç®—æ–¹å¼
+ * å¼‚ä¼—æ¯”ç‡:specRatio1,3 seriesRatio1,3
+ * æ„Ÿå…´è¶£çš„è½¦å‹è½¦ç³»ä¸ªæ•°:seriesCnt specCnt
+ * æ„Ÿå…´è¶£çš„è½¦å‹ä»·æ ¼å‡å€¼å’Œæ–¹å·®:specVar specMean
  * 
  * version2
- * Éú³ÉÓÃ»§ÌØÕ÷¼¯ºÏ£¬Ö÷Òª¸²¸ÇµÄÊÇÊ±ĞòÏà¹ØµÄ»ùÓÚpvÈÕÖ¾µÄbehavior targetingÌØÕ÷
- * Ö§³ÖpredÈÕÆÚÖ®Ç°µÄ¶à¸öÊ±¼ä¶ÎµÄÌØÕ÷µÄÍ¬Ê±Êä³ö£¬Ö§³ÖÍ¬Ê±Êä³öÑµÁ·¼¯ºÍ²âÊÔ¼¯ÌØÕ÷,»òÕßÖ»ÊÇÉú³ÉÑµÁ·¼¯ÌØÕ÷
- * °üÀ¨:ÆµµÀĞËÈ¤£¬³µĞÍ£¬³µÏµ£¬¼Û¸ñ£¬ÓÃ»§ÊôĞÔµÈ
+ * ç”Ÿæˆç”¨æˆ·ç‰¹å¾é›†åˆï¼Œä¸»è¦è¦†ç›–çš„æ˜¯æ—¶åºç›¸å…³çš„åŸºäºpvæ—¥å¿—çš„behavior targetingç‰¹å¾
+ * æ”¯æŒpredæ—¥æœŸä¹‹å‰çš„å¤šä¸ªæ—¶é—´æ®µçš„ç‰¹å¾çš„åŒæ—¶è¾“å‡ºï¼Œæ”¯æŒåŒæ—¶è¾“å‡ºè®­ç»ƒé›†å’Œæµ‹è¯•é›†ç‰¹å¾,æˆ–è€…åªæ˜¯ç”Ÿæˆè®­ç»ƒé›†ç‰¹å¾
+ * åŒ…æ‹¬:é¢‘é“å…´è¶£ï¼Œè½¦å‹ï¼Œè½¦ç³»ï¼Œä»·æ ¼ï¼Œç”¨æˆ·å±æ€§ç­‰
  * 
  */
 
@@ -119,14 +119,15 @@ public class RawTarget extends AbstractProcessor {
 				d = new SimpleDateFormat("yyyyMMdd").parse(date);
 				Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_train_start.replaceAll("/", ""));
 				long diff = d2.getTime() - d.getTime();
-				long days_train = diff/(1000*60*60*24);  //ÑµÁ·°ëË¥ÆÚÇø¼ä
+				long days_train = diff/(1000*60*60*24);  //Ñµï¿½ï¿½ï¿½ï¿½Ë¥ï¿½ï¿½ï¿½ï¿½ï¿½
 				long days_test = 999;
-				
+				int series=0;
+				int spec=0;
 				if(! pred_test_start.equals("no"))
 				{
 					d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_test_start.replaceAll("/", ""));
 					diff = d2.getTime() - d.getTime();
-					days_test = diff/(1000*60*60*24);  //ÑµÁ·°ëË¥ÆÚÇø¼ä
+					days_test = diff/(1000*60*60*24);  //Ñµï¿½ï¿½ï¿½ï¿½Ë¥ï¿½ï¿½ï¿½ï¿½ï¿½
 				}
 				
 				if(pvList != null && pvList.size() > 0)
@@ -134,8 +135,12 @@ public class RawTarget extends AbstractProcessor {
 					HashMap<String, Double> dc = new HashMap<String, Double>();
 					for(PvlogOperation.AutoPVInfo pvinfo : pvList) {
 						
-						int series = Integer.valueOf(pvinfo.getSeriesid());														
-						int spec = Integer.valueOf(pvinfo.getSpecid());
+						if(pattern.matcher(pvinfo.getSeriesid()).matches())
+							series = Integer.valueOf(pvinfo.getSeriesid());	
+						if(pattern.matcher(pvinfo.getSpecid()).matches())
+							spec = Integer.valueOf(pvinfo.getSpecid());
+							
+					
 						
 						String province = pvinfo.getProvinceid().trim();
 						String city = pvinfo.getCityid().trim();
@@ -149,8 +154,10 @@ public class RawTarget extends AbstractProcessor {
 							if( (days_train > 0) && (days_train <= day) )
 							{
 								double score = Math.pow(decay,days_train);
-								add("tr_series_" + String.valueOf(day) + "@" + series, dc, score);
-								add("tr_spec_"+ String.valueOf(day) + "@" + spec, dc, score);																								
+								if(pattern.matcher(pvinfo.getSeriesid()).matches())
+									add("tr_series_" + String.valueOf(day) + "@" + series, dc, score);
+								if(pattern.matcher(pvinfo.getSpecid()).matches())
+									add("tr_spec_"+ String.valueOf(day) + "@" + spec, dc, score);																								
 								
 								if(pattern.matcher(pvinfo.getSite1Id()).matches() && pattern.matcher(pvinfo.getSite2Id()).matches() )
 									add("tr_channel_" + String.valueOf(day) + "@" + pvinfo.getSite1Id()+"#"+pvinfo.getSite2Id(), dc, score);
@@ -198,7 +205,7 @@ public class RawTarget extends AbstractProcessor {
 	}
 
 	/*
-	 * Îªmap½×¶ÎµÄËùÓĞÌØÕ÷Ôö¼ÓÈçÏÂÌØÕ÷£º
+	 * ä¸ºmapé˜¶æ®µçš„æ‰€æœ‰ç‰¹å¾å¢åŠ å¦‚ä¸‹ç‰¹å¾ï¼š
 	 */
 	public static class HReduce extends Reducer<Text, Text, Text, Text> {
 		private Map<String,Double> spec_price_map = new HashMap<String,Double>();
@@ -346,7 +353,7 @@ public class RawTarget extends AbstractProcessor {
 			}
 			
 			/*
-			 * ÓÃ»§ÊÇ·ñ¾ö¶¨¹ºÂòÄ³¿î³µĞÍ »¹ÊÇÔÚÑ¡Ôñ¶à¿î³µĞÍµÄ½×¶Î
+			 * ç”¨æˆ·æ˜¯å¦å†³å®šè´­ä¹°æŸæ¬¾è½¦å‹ è¿˜æ˜¯åœ¨é€‰æ‹©å¤šæ¬¾è½¦å‹çš„é˜¶æ®µ
 			 *  
 			 * */
 			dic_tmp = new HashMap<String, Double>();

@@ -25,7 +25,7 @@ import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
 
 public class Subset extends AbstractProcessor{
 	
-	public static class ChannelpvMapper extends Mapper<LongWritable, Text, Text, Text>{
+	public static class SubsetMapper extends Mapper<LongWritable, Text, Text, Text>{
 		
 		private HashSet<String> chosen_features = new HashSet<String>();
 		private String filename = null;
@@ -76,7 +76,7 @@ public class Subset extends AbstractProcessor{
 	
 	protected void configJob(Job job) {
 
-		job.setMapperClass(ChannelpvMapper.class);
+		job.setMapperClass(SubsetMapper.class);
 		//job.setReducerClass(HReduce.class);
 	    job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
