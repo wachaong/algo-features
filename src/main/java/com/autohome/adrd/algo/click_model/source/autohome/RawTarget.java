@@ -119,7 +119,7 @@ public class RawTarget extends AbstractProcessor {
 				d = new SimpleDateFormat("yyyyMMdd").parse(date);
 				Date d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_train_start.replaceAll("/", ""));
 				long diff = d2.getTime() - d.getTime();
-				long days_train = diff/(1000*60*60*24);  //ѵ����˥�����
+				long days_train = diff/(1000*60*60*24);
 				long days_test = 999;
 				int series=0;
 				int spec=0;
@@ -127,7 +127,7 @@ public class RawTarget extends AbstractProcessor {
 				{
 					d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_test_start.replaceAll("/", ""));
 					diff = d2.getTime() - d.getTime();
-					days_test = diff/(1000*60*60*24);  //ѵ����˥�����
+					days_test = diff/(1000*60*60*24);
 				}
 				
 				if(pvList != null && pvList.size() > 0)
@@ -244,7 +244,7 @@ public class RawTarget extends AbstractProcessor {
 			}
 		}
 		
-		private List<Entry<String, Double>> filter_from_dict(String filter, HashMap<String, Double> dic) {
+		private List<Entry<String, Double>> filter_sort_dict(String filter, HashMap<String, Double> dic) {
 			HashMap<String, Double> subset = new HashMap<String, Double>();
 			for(Map.Entry<String, Double> entry : dic.entrySet()) {
 				if(entry.getKey().trim().indexOf(filter) != -1)
@@ -263,6 +263,18 @@ public class RawTarget extends AbstractProcessor {
 			return dic_lst;			
 		}
 		
+		private Map<String, Double> filter_from_dict(String filter, HashMap<String, Double> dic) {
+			HashMap<String, Double> subset = new HashMap<String, Double>();
+			for(Map.Entry<String, Double> entry : dic.entrySet()) {
+				if(entry.getKey().trim().indexOf(filter) != -1)
+				{
+					subset.put(entry.getKey(), entry.getValue());
+				}
+			 }			
+			
+			return subset;			
+		}
+		
 		private HashMap<String, Double> ratio_features(String prefix, List<Map.Entry<String, Double>> sort_lst, 
 				Map<String,Double> spec_price_map) {
 			HashMap<String, Double> new_feas = new HashMap<String, Double>();
@@ -276,6 +288,11 @@ public class RawTarget extends AbstractProcessor {
 			for (int i = 0; i < sort_lst.size(); i++) {
 			    if(i == 0)
 			    	ratio_top1 += sort_lst.get(i).getValue();
+			    
+			    if(i > 10)  //去掉低频兴趣
+			    	break;
+			    new_feas.put(sort_lst.get(i).getKey() , sort_lst.get(i).getValue());
+			    
 			    if(i<3)
 			    {
 			    	ratio_top3 += sort_lst.get(i).getValue();
@@ -359,16 +376,16 @@ public class RawTarget extends AbstractProcessor {
 			dic_tmp = new HashMap<String, Double>();
 			for(String type : types)
 			{
-				sort_lst = filter_from_dict(type, dic);
+				sort_lst = filter_sort_dict(type, dic);
 				dic_add = ratio_features(type, sort_lst, spec_price_map);
 				dic_tmp.putAll(dic_add);
 				dic_add.clear();
 			}
-						
-			dic.putAll(dic_tmp);
+			Map<String, Double> saleleads = filter_from_dict("hissaleleads", dic);
+			dic_tmp.putAll(saleleads);
 			
 			if(!dic.isEmpty())			
-			    context.write(key, new Text(output_map(dic)));
+			    context.write(key, new Text(output_map(dic_tmp)));
 		}
 	}
 
