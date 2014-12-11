@@ -121,8 +121,8 @@ public class RawTarget extends AbstractProcessor {
 				long diff = d2.getTime() - d.getTime();
 				long days_train = diff/(1000*60*60*24);
 				long days_test = 999;
-				int series=0;
-				int spec=0;
+				String series="";
+				String spec="";
 				if(! pred_test_start.equals("no"))
 				{
 					d2 = new SimpleDateFormat("yyyyMMdd").parse(pred_test_start.replaceAll("/", ""));
@@ -135,13 +135,14 @@ public class RawTarget extends AbstractProcessor {
 					HashMap<String, Double> dc = new HashMap<String, Double>();
 					for(PvlogOperation.AutoPVInfo pvinfo : pvList) {
 						
-						if(pattern.matcher(pvinfo.getSeriesid()).matches())
-							series = Integer.valueOf(pvinfo.getSeriesid());	
-						if(pattern.matcher(pvinfo.getSpecid()).matches())
-							spec = Integer.valueOf(pvinfo.getSpecid());
+						if((!pattern.matcher(pvinfo.getSeriesid()).matches()) || (pvinfo.getSeriesid().equals("")))
+							continue;
+						if((!pattern.matcher(pvinfo.getSpecid()).matches()) || (pvinfo.getSpecid().equals("")))
+							continue;
 							
-					
-						
+						series = pvinfo.getSeriesid();	
+						spec = pvinfo.getSpecid();
+																		
 						String province = pvinfo.getProvinceid().trim();
 						String city = pvinfo.getCityid().trim();
 						add("province" + "@" + province, dc, 1.0);
@@ -154,9 +155,9 @@ public class RawTarget extends AbstractProcessor {
 							if( (days_train > 0) && (days_train <= day) )
 							{
 								double score = Math.pow(decay,days_train);
-								if(pattern.matcher(pvinfo.getSeriesid()).matches())
+								if(! pvinfo.getSeriesid().equals("0"))
 									add("tr_series_" + String.valueOf(day) + "@" + series, dc, score);
-								if(pattern.matcher(pvinfo.getSpecid()).matches())
+								if(! pvinfo.getSpecid().equals("0"))
 									add("tr_spec_"+ String.valueOf(day) + "@" + spec, dc, score);																								
 								
 								if(pattern.matcher(pvinfo.getSite1Id()).matches() && pattern.matcher(pvinfo.getSite2Id()).matches() )
@@ -165,8 +166,10 @@ public class RawTarget extends AbstractProcessor {
 							if( days_test <= day )
 							{
 								double score = Math.pow(decay,days_test);
-								add("te_series_" + String.valueOf(day) + "@" + series, dc, score);
-								add("te_spec_"+ String.valueOf(day) + "@" + spec, dc, score);
+								if(! pvinfo.getSeriesid().equals("0"))
+									add("te_series_" + String.valueOf(day) + "@" + series, dc, score);
+								if(! pvinfo.getSpecid().equals("0"))
+									add("te_spec_"+ String.valueOf(day) + "@" + spec, dc, score);
 								
 								if(pattern.matcher(pvinfo.getSite1Id()).matches() && pattern.matcher(pvinfo.getSite2Id()).matches() )
 									add("te_channel_" + String.valueOf(day) + "@" + pvinfo.getSite1Id()+"#"+pvinfo.getSite2Id(), dc, score);
@@ -285,6 +288,12 @@ public class RawTarget extends AbstractProcessor {
 			if( sort_lst.get(0).getKey().indexOf("spec") != -1 )
 				do_price = true;
 			
+			if(( sort_lst.get(0).getKey().indexOf("province") != -1 ) || ( sort_lst.get(0).getKey().indexOf("city") != -1 ))
+			{
+				new_feas.put(sort_lst.get(0).getKey() , 1.0);
+				return new_feas;
+			}
+			
 			for (int i = 0; i < sort_lst.size(); i++) {
 			    if(i == 0)
 			    	ratio_top1 += sort_lst.get(i).getValue();
@@ -306,7 +315,7 @@ public class RawTarget extends AbstractProcessor {
 			    		
 			    }
 			    sum += sort_lst.get(i).getValue();
-			    if(sort_lst.get(i).getValue() > 2)
+			    if(sort_lst.get(i).getValue() > 0.1)
 			    	cnt++;			    
 			}
 			if(sum > 0) {
@@ -342,6 +351,7 @@ public class RawTarget extends AbstractProcessor {
 		
 		private String output_map(HashMap<String, Double> map) {
 			StringBuilder sb = new StringBuilder();
+			java.text.DecimalFormat df = new java.text.DecimalFormat("#.00");  
 			int i = 0;
 			for(Map.Entry<String, Double> entry : map.entrySet()) {
 				if(i > 0)
@@ -351,7 +361,7 @@ public class RawTarget extends AbstractProcessor {
 				sb.append(":");
 				double val = entry.getValue();
 
-				sb.append(val);				
+				sb.append(df.format(val));				
 			}
 			return sb.toString();
 		}
