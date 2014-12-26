@@ -45,6 +45,7 @@ public class HistroySale_Label extends AbstractProcessor {
 		private static String days_history;
 		private static String pred_days;
 		
+		
 		public void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
 			projection = context.getConfiguration().get("mapreduce.lib.table.input.projection", "user,addisplay,adclick,pv,apppv,saleleads,tags");
@@ -101,6 +102,8 @@ public class HistroySale_Label extends AbstractProcessor {
 			Date d_sale;
 			Date d_pv;
 			
+
+			
 			//sessionlog_sale
 			
 			try {
@@ -115,7 +118,7 @@ public class HistroySale_Label extends AbstractProcessor {
 				
 			
 
-				context.write(new Text(cookie), new Text("test"));
+
 				
 				if(! pred_test_start.equals("no"))
 				{
@@ -140,7 +143,7 @@ public class HistroySale_Label extends AbstractProcessor {
 							double score = Math.pow(decay,days_train_sale);
 							add("tr_hissaleleads_" + String.valueOf(day), dc, score);								
 						}
-						if( days_test_sale <= day )
+						if( (days_test_sale > 0) &&(days_test_sale <= day) )
 						{
 							double score = Math.pow(decay,days_test_sale);
 							add("te_hissaleleads_" + String.valueOf(day), dc, score);								
@@ -150,18 +153,21 @@ public class HistroySale_Label extends AbstractProcessor {
 					if(!dc.isEmpty()){
 						context.write(new Text(cookie), new Text(output_map(dc)));
 					}
-
+    
 					
 				
 					if( ((int)days_train_sale <= 0) && ((int)days_train_sale >= Integer.parseInt(pred_days)*(-1)) )
 					{
 
 						context.write(new Text(cookie), new Text("tr_sale"));
+	
+						
 					}
 					if( ((int)days_test_sale <= 0) && ((int)days_test_sale >= Integer.parseInt(pred_days)*(-1)) )
 					{
 						
 						context.write(new Text(cookie), new Text("te_sale"));
+				
 					
 					}
 					
@@ -210,11 +216,13 @@ public class HistroySale_Label extends AbstractProcessor {
 					{
 
 						context.write(new Text(cookie), new Text("tr_pv"));
+					
 					}
 					if( ((int)days_test_pv <= 0) && ((int)days_test_pv >= Integer.parseInt(pred_days)*(-1)) )
 					{
 						
 						context.write(new Text(cookie), new Text("te_pv"));
+			
 					
 					}
 					
@@ -222,58 +230,89 @@ public class HistroySale_Label extends AbstractProcessor {
 				
 				
 				
+					
+				
+				
 			} catch (ParseException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
+
 																		
 		}
 	}
 
 	public static class HReduce extends Reducer<Text, Text, Text, Text> {
+		
+		private String output_map(HashMap<String, Double> map) {
+			StringBuilder sb = new StringBuilder();
+			java.text.DecimalFormat df = new java.text.DecimalFormat("#.00");  
+			int i = 0;
+			for(Map.Entry<String, Double> entry : map.entrySet()) {
+				if(i > 0)
+					sb.append("\t");
+				i++;
+				sb.append(entry.getKey());
+				sb.append(":");
+				double val = entry.getValue();
 
+				sb.append(df.format(val));				
+			}
+			return sb.toString();
+		}
+
+		private void add(String fea, HashMap<String, Double> map, double score) {
+			if(map.containsKey(fea)) {
+				map.put(fea, map.get(fea) + score);
+			}
+			else
+				map.put(fea, score);	
+		}
+		
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 
 			int tr_sale =0;
 			int tr_pv=0;
 			int te_sale =0;
 			int te_pv =0;
-			
-			StringBuilder sb = new StringBuilder();
+			HashMap<String,Double> featurevalue = new HashMap<String,Double>();
 			for (Text value : values) {
-
-				String [] segs = value.toString().split(":");
-				if(segs[0].contains("tr_sale"))
+				String  seg = value.toString();
+				if(seg.contains("tr_sale"))
 					tr_sale=1;
-				if(segs[0].contains("tr_pv"))
+				if(seg.contains("tr_pv"))
 					tr_pv=1;
-				if(segs[0].contains("te_sale"))
+				if(seg.contains("te_sale"))
 					te_sale=1;
-				if(segs[0].contains("te_pv"))
+				if(seg.contains("te_pv"))
 					te_pv=1;
-				if(segs[0].contains("hissaleleads"))
-					sb.append(value.toString()+"\t");
+				if(seg.contains("hissaleleads")){
+					String[] hissales = seg.split("\t");
+					for(int i=0;i<hissales.length;++i){
+						String[] hissale = hissales[i].split(":");
+						add(hissale[0],featurevalue,Double.valueOf(hissale[1]));
+					}
+
+				}
 			
 			
 			}
 			
-			if(tr_pv==1){
-				if(tr_sale==1)
-					context.write(key,new Text("tr_label"+":1"));
-				else 
-					context.write(key,new Text("tr_label"+":0"));
-			}
+			if(tr_sale==1)
+				context.write(key,new Text("tr_label"+":1"));
+			else if(tr_pv==1 )
+				context.write(key,new Text("tr_label"+":0"));
 			
-			if(te_pv==1){
-				if(te_sale==1)
-					context.write(key,new Text("te_label"+":1"));
-				else 
-					context.write(key,new Text("te_label"+":0"));
-			}
 			
-			if(!sb.toString().isEmpty())
-				context.write(key,new Text(sb.toString()));
+			if(te_sale==1)
+				context.write(key,new Text("te_label"+":1"));
+			else if(te_pv==1)
+				context.write(key,new Text("te_label"+":0"));
 			
+
+			if(!featurevalue.isEmpty())
+				context.write(key,new Text(output_map(featurevalue)));
 		}
 	}
 

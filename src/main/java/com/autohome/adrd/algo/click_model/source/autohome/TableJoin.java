@@ -19,44 +19,26 @@ public class TableJoin extends AbstractProcessor{
 	
 	public static class JoinMapper extends Mapper<LongWritable, Text, Text, Text>{
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException{
-			String path=((FileSplit)context.getInputSplit()).getPath().toString();
-
 			String[] lines = value.toString().split("\t");
-			
-
-			StringBuilder sb = new StringBuilder();
 			StringBuilder trainfeature = new StringBuilder();
 			StringBuilder testfeature = new StringBuilder();
 			int startnum=1;
-		
-			if (path.contains("train"))
-				context.write(new Text(lines[0]),new Text("tr_"+lines[1]));
-			
-			else if (path.contains("test"))
-				context.write(new Text(lines[0]),new Text("te_"+lines[1]));
-			
-			else{
-
 				for (int i=startnum;i<lines.length;i++){
 					if(!lines[i].equals("0")&&!lines[i].equals("")){
-
 						if (lines[i].contains("tr_")) 
 							trainfeature.append(lines[i]+"\t");
-						if (lines[i].contains("te_"))
-							testfeature.append(lines[i]+"\t");
-							
-							
-							
+						else if (lines[i].contains("te_"))
+							testfeature.append(lines[i]+"\t");		
 						}
-					
-						
 					}
+				
+				
 				if(trainfeature.toString().length()!=0)
 					context.write(new Text(lines[0]),new Text(trainfeature.toString()));
 				if(testfeature.toString().length()!=0)
 					context.write(new Text(lines[0]),new Text(testfeature.toString()));
 				
-				}
+
 		
 
 			}
@@ -81,11 +63,12 @@ public class TableJoin extends AbstractProcessor{
 		public void reduce(Text key, Iterable<Text> values, Context context)
 				throws IOException, InterruptedException {
 
-			StringBuilder trainlabel = new StringBuilder();
 			StringBuilder trainfeature = new StringBuilder();
-			StringBuilder testlabel = new StringBuilder();
 			StringBuilder testfeature = new  StringBuilder();
-			
+			int trainpv = 0;
+			int trainsale = 0;
+			int testpv = 0;
+			int testsale = 0;
 			
 			
 			for (Text value : values) {
@@ -94,41 +77,50 @@ public class TableJoin extends AbstractProcessor{
 			
 				for(int i=0;i<lines.length;i++){
 					if(lines[i].equals("tr_label:0")){
-						trainlabel.append("0");
+						trainpv = 1;
 					}else if(lines[i].equals("tr_label:1")){
-						trainlabel.append("1");
+						trainsale = 1;
 					}else if(lines[i].equals("te_label:0")){
-						testlabel.append("0");
+						testpv = 1;
 					}else if(lines[i].equals("te_label:1")){
-						testlabel.append("1");
+						testsale = 1;
 					}else{ 
 						if (lines[i].contains("tr_")) 
 							trainfeature.append(lines[i].substring(3)+"\t");
-						if (lines[i].contains("te_"))
+						else if (lines[i].contains("te_"))
 							testfeature.append(lines[i].substring(3)+"\t");
+						
 					}
 				}
 				
 				
 			}
 			
+			//过滤掉没行为的cookie
 			
-			//add new cookie bias
-			if(trainlabel.toString().length()!=0){
-				if(trainfeature.toString().length()!=0){
-					multipath.write(new Text(trainlabel.toString()), new Text(trainfeature.toString()),trainpath);
-				}else{
-					multipath.write(new Text(trainlabel.toString()), new Text("new:1"),trainpath);
-				}
+			if(trainsale==1){
+				if(trainfeature.toString().length()!=0)
+					multipath.write(new Text("1"), new Text(trainfeature.toString()),trainpath);
+			}
+			else if(trainpv == 1){
+				if(trainfeature.toString().length()!=0)
+					multipath.write(new Text("0"), new Text(trainfeature.toString()),trainpath);
 			}
 			
-			if(testlabel.toString().length()!=0){
-				if(testfeature.toString().length()!=0){
-					multipath.write(new Text(testlabel.toString()), new Text(testfeature.toString()),testpath);
-				}else{
-					multipath.write(new Text(testlabel.toString()), new Text("new:1"),testpath);
-				}
+			
+			if(testsale == 1){
+				if(testfeature.toString().length()!=0)
+					multipath.write(new Text("1"), new Text(testfeature.toString()),testpath);			
 			}
+			else if(testpv == 1){
+				if(testfeature.toString().length()!=0)
+					multipath.write(new Text("0"), new Text(testfeature.toString()),testpath);	
+			}
+				
+			
+
+			
+		
 			
 		}
 		
@@ -141,7 +133,7 @@ public class TableJoin extends AbstractProcessor{
 	
 	protected void configJob(Job job) {
 
-		job.setMapperClass(JoinMapper.class);
+	    job.setMapperClass(JoinMapper.class);
 		job.setReducerClass(HReduce.class);
 	    job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
