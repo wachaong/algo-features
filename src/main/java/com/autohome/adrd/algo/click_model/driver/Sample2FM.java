@@ -56,7 +56,7 @@ public class Sample2FM extends AbstractProcessor {
 			
 			StringBuilder sb = new StringBuilder();
 			sb.append((int)s.getLabel());
-			sb.append("\t");
+			//sb.append("\t");
 			boolean has_feature = false;
 			for(String fea : s.getIdFeatures()) {
 				int clm = -1;

@@ -7,29 +7,47 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-
-
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
-
 import com.autohome.adrd.algo.click_model.io.AbstractProcessor;
-
-
-public class TableJoin extends AbstractProcessor{
+/**
+ * 
+ * @author [Chen shuaihua ]
+ * 
+ *join feature和label，输出训练集、测试集sample
+ * 
+ */
+public class MultiPathTableJoin extends AbstractProcessor{
 	
 	public static class JoinMapper extends Mapper<LongWritable, Text, Text, Text>{
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException{
+			String path=((FileSplit)context.getInputSplit()).getPath().toString();
+
 			String[] lines = value.toString().split("\t");
+			
+
+			StringBuilder sb = new StringBuilder();
 			StringBuilder trainfeature = new StringBuilder();
 			StringBuilder testfeature = new StringBuilder();
 			int startnum=1;
+
+
 				for (int i=startnum;i<lines.length;i++){
 					if(!lines[i].equals("0")&&!lines[i].equals("")){
+
 						if (lines[i].contains("tr_")) 
 							trainfeature.append(lines[i]+"\t");
 						else if (lines[i].contains("te_"))
-							testfeature.append(lines[i]+"\t");		
+							testfeature.append(lines[i]+"\t");
+						else{
+							//bool feature
+							context.write(new Text(lines[0]),new Text(lines[i]));
 						}
+							
+							
+						}
+					
+						
 					}
 				
 				
@@ -63,12 +81,11 @@ public class TableJoin extends AbstractProcessor{
 		public void reduce(Text key, Iterable<Text> values, Context context)
 				throws IOException, InterruptedException {
 
+			StringBuilder trainlabel = new StringBuilder();
 			StringBuilder trainfeature = new StringBuilder();
+			StringBuilder testlabel = new StringBuilder();
 			StringBuilder testfeature = new  StringBuilder();
-			int trainpv = 0;
-			int trainsale = 0;
-			int testpv = 0;
-			int testsale = 0;
+			
 			
 			
 			for (Text value : values) {
@@ -77,48 +94,49 @@ public class TableJoin extends AbstractProcessor{
 			
 				for(int i=0;i<lines.length;i++){
 					if(lines[i].equals("tr_label:0")){
-						trainpv = 1;
+						trainlabel.append("0");
 					}else if(lines[i].equals("tr_label:1")){
-						trainsale = 1;
+						trainlabel.append("1");
 					}else if(lines[i].equals("te_label:0")){
-						testpv = 1;
+						testlabel.append("0");
 					}else if(lines[i].equals("te_label:1")){
-						testsale = 1;
+						testlabel.append("1");
 					}else{ 
 						if (lines[i].contains("tr_")) 
 							trainfeature.append(lines[i].substring(3)+"\t");
 						else if (lines[i].contains("te_"))
 							testfeature.append(lines[i].substring(3)+"\t");
-						
+						else{
+							trainfeature.append(lines[i]+"\t");
+							testfeature.append(lines[i]+"\t");
+						}
 					}
 				}
 				
 				
 			}
 			
-			//过滤掉没行为的cookie
 			
-			if(trainsale==1){
-				if(trainfeature.toString().length()!=0)
-					multipath.write(new Text("1"), new Text(trainfeature.toString()),trainpath);
-			}
-			else if(trainpv == 1){
-				if(trainfeature.toString().length()!=0)
-					multipath.write(new Text("0"), new Text(trainfeature.toString()),trainpath);
-			}
+			//add new cookie bias
+			if(trainlabel.toString().length()!=0){
+				if(trainfeature.toString().length()!=0){
+					multipath.write(new Text(trainlabel.toString()), new Text(trainfeature.toString()),trainpath);
 			
-			
-			if(testsale == 1){
-				if(testfeature.toString().length()!=0)
-					multipath.write(new Text("1"), new Text(testfeature.toString()),testpath);			
-			}
-			else if(testpv == 1){
-				if(testfeature.toString().length()!=0)
-					multipath.write(new Text("0"), new Text(testfeature.toString()),testpath);	
-			}
+				}else{
+					multipath.write(new Text(trainlabel.toString()), new Text("new:1"),trainpath);
 				
+				}
+			}
 			
-
+			if(testlabel.toString().length()!=0){
+				if(testfeature.toString().length()!=0){
+					multipath.write(new Text(testlabel.toString()), new Text(testfeature.toString()),testpath);
+				
+				}else{
+					multipath.write(new Text(testlabel.toString()), new Text("new:1"),testpath);
+				
+				}
+			}
 			
 		
 			
@@ -133,7 +151,7 @@ public class TableJoin extends AbstractProcessor{
 	
 	protected void configJob(Job job) {
 
-	    job.setMapperClass(JoinMapper.class);
+		job.setMapperClass(JoinMapper.class);
 		job.setReducerClass(HReduce.class);
 	    job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
